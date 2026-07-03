@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ryzen Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --gold:#C9A84C;
+    --dark:#111;
+    --black:#000;
+    --white:#fff;
+    --gray:#888;
+    --gray2:#333;
+    --panel:#1a1a1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--black);color:var(--white);font-family:'Montserrat',sans-serif;min-height:100vh}
+  h1,h2{font-family:'Playfair Display',serif}
+
+  /* ── LOGIN ── */
+  #login-view{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .login-box{max-width:360px;width:100%;padding:40px 32px;border:1px solid var(--gray2);background:var(--panel)}
+  .login-box h1{font-size:24px;margin-bottom:4px}
+  .login-box .sub{font-size:12px;color:var(--gray);letter-spacing:1px;text-transform:uppercase;margin-bottom:28px}
+  .login-box input{width:100%;padding:12px;background:var(--black);border:1px solid var(--gray2);color:var(--white);font-family:'Montserrat',sans-serif;font-size:14px;margin-bottom:14px}
+  .login-box input:focus{outline:none;border-color:var(--gold)}
+  .btn{padding:12px 20px;background:var(--gold);color:var(--black);border:none;font-family:'Montserrat',sans-serif;font-weight:600;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:opacity .2s}
+  .btn:hover{opacity:.85}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn-outline{background:none;border:1px solid var(--gray2);color:var(--white)}
+  .btn-danger{background:#c62828;color:var(--white)}
+  .err-msg{color:#e57373;font-size:12px;margin-top:8px;min-height:16px}
+
+  /* ── APP SHELL ── */
+  #app-view{display:none}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--gray2)}
+  .topbar h1{font-size:20px}
+  .topbar .tag{font-size:10px;color:var(--gold);letter-spacing:2px;text-transform:uppercase}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 20px 60px}
+
+  /* ── FORM ── */
+  .card{border:1px solid var(--gray2);background:var(--panel);padding:24px;margin-bottom:28px}
+  .card h2{font-size:16px;margin-bottom:18px;letter-spacing:.5px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--gray);margin-bottom:6px}
+  .field input,.field select{width:100%;padding:10px;background:var(--black);border:1px solid var(--gray2);color:var(--white);font-family:'Montserrat',sans-serif;font-size:13px}
+  .field textarea{width:100%;padding:10px;background:var(--black);border:1px solid var(--gray2);color:var(--white);font-family:'Montserrat',sans-serif;font-size:13px;resize:vertical;min-height:70px}
+  .field textarea:focus{outline:none;border-color:var(--gold)}
+  .field input:focus,.field select:focus{outline:none;border-color:var(--gold)}
+  .img-toggle{display:flex;gap:8px;margin-bottom:10px}
+  .img-toggle button{flex:1;padding:8px;background:var(--black);border:1px solid var(--gray2);color:var(--gray);font-size:11px;letter-spacing:1px;text-transform:uppercase;cursor:pointer}
+  .img-toggle button.on{border-color:var(--gold);color:var(--gold)}
+  .img-preview{width:100px;height:100px;object-fit:cover;border:1px solid var(--gray2);margin-top:10px;display:none}
+  .form-actions{display:flex;gap:10px;margin-top:6px}
+  .status-msg{font-size:12px;margin-top:10px;min-height:16px}
+  .status-msg.ok{color:#81c784}
+  .status-msg.err{color:#e57373}
+
+  /* ── PRODUCT LIST ── */
+  .plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px}
+  .pcard{border:1px solid var(--gray2);background:var(--panel);overflow:hidden}
+  .pcard img{width:100%;height:160px;object-fit:cover;display:block;background:#222}
+  .pcard-body{padding:14px}
+  .pcard-body .pname{font-size:14px;font-weight:600;margin-bottom:4px}
+  .pcard-body .pmeta{font-size:11px;color:var(--gray);margin-bottom:10px}
+  .pcard-actions{display:flex;gap:8px}
+  .pcard-actions button{flex:1;padding:7px;font-size:10px;letter-spacing:1px;text-transform:uppercase}
+  .empty{color:var(--gray);font-size:13px;padding:40px 0;text-align:center}
+
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="login-view">
+  <div class="login-box">
+    <h1>Ryzen Admin</h1>
+    <div class="sub">Product Management</div>
+    <input type="password" id="pw-input" placeholder="Password" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn" style="width:100%" onclick="login()">Log In</button>
+    <div class="err-msg" id="login-err"></div>
+  </div>
+</div>
+
+<div id="app-view">
+  <div class="topbar">
+    <div>
+      <h1>Ryzen Admin</h1>
+      <div class="tag">Product Management</div>
+    </div>
+    <button class="btn btn-outline" onclick="logout()">Log Out</button>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2 id="form-title">Add New Product</h2>
+      <div class="grid2">
+        <div class="field"><label>Product Name</label><input type="text" id="f-name" placeholder="e.g. Henley T-Shirt"></div>
+        <div class="field"><label>Short Label</label><input type="text" id="f-label" placeholder="e.g. Henley"></div>
+        <div class="field"><label>Category</label>
+          <select id="f-cat" onchange="syncCatLabel()">
+            <option value="tshirt">T-Shirts</option>
+            <option value="pants">Pants</option>
+            <option value="sets">Sets</option>
+          </select>
+        </div>
+        <div class="field"><label>Badge</label>
+          <select id="f-badge">
+            <option value="">None</option>
+            <option value="new">New</option>
+            <option value="pre">Pre-Order</option>
+            <option value="sale">Sale</option>
+            <option value="limited">Limited Edition</option>
+          </select>
+        </div>
+        <div class="field"><label>Price (₹)</label><input type="number" id="f-price" placeholder="1499"></div>
+        <div class="field"><label>Original Price (₹, optional)</label><input type="number" id="f-original" placeholder="Leave blank if no discount"></div>
+        <div class="field"><label>Sizes (comma-separated)</label><input type="text" id="f-sizes" value="S, M, L, XL"></div>
+        <div class="field" id="f-id-field" style="display:none"><label>Product ID</label><input type="text" id="f-id" disabled></div>
+      </div>
+
+      <div class="field">
+        <label>Description</label>
+        <textarea id="f-description" placeholder="e.g. Premium quality fabric with a tailored fit. Pre-order now — production begins once the 60-day window closes."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Product Image</label>
+        <div class="img-toggle">
+          <button type="button" id="tab-url" class="on" onclick="setImgMode('url')">Image URL</button>
+          <button type="button" id="tab-file" onclick="setImgMode('file')">Upload File</button>
+        </div>
+        <input type="text" id="f-image-url" placeholder="https://...">
+        <input type="file" id="f-image-file" accept="image/*" style="display:none">
+        <img id="img-preview" class="img-preview">
+      </div>
+
+      <div class="form-actions">
+        <button class="btn" id="save-btn" onclick="saveProduct()">Add Product</button>
+        <button class="btn btn-outline" id="cancel-edit-btn" style="display:none" onclick="resetForm()">Cancel Edit</button>
+      </div>
+      <div class="status-msg" id="form-status"></div>
+    </div>
+
+    <h2 style="font-size:16px;margin-bottom:16px;">Current Products</h2>
+    <div class="plist" id="plist"><div class="empty">Loading products…</div></div>
+  </div>
+</div>
+
+<script>
+var TOKEN=null, PRODUCTS=[], EDIT_ID=null, IMG_MODE='url';
+
+/* ── AUTH ── */
+function login(){
+  var pw=document.getElementById('pw-input').value;
+  var errEl=document.getElementById('login-err');
+  errEl.textContent='';
+  if(!pw){errEl.textContent='Enter your password.';return;}
+  fetch('/api/admin?action=login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})})
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok){errEl.textContent=res.d.error||'Login failed.';return;}
+      TOKEN=res.d.token;
+      sessionStorage.setItem('ryzen_admin_token',TOKEN);
+      showApp();
+    })
+    .catch(function(){errEl.textContent='Network error. Try again.';});
+}
+function logout(){
+  TOKEN=null;
+  sessionStorage.removeItem('ryzen_admin_token');
+  document.getElementById('app-view').style.display='none';
+  document.getElementById('login-view').style.display='flex';
+}
+function showApp(){
+  document.getElementById('login-view').style.display='none';
+  document.getElementById('app-view').style.display='block';
+  loadProducts();
+}
+(function checkSession(){
+  var saved=sessionStorage.getItem('ryzen_admin_token');
+  if(saved){TOKEN=saved;showApp();}
+})();
+
+/* ── IMAGE MODE ── */
+function setImgMode(mode){
+  IMG_MODE=mode;
+  document.getElementById('tab-url').classList.toggle('on',mode==='url');
+  document.getElementById('tab-file').classList.toggle('on',mode==='file');
+  document.getElementById('f-image-url').style.display=mode==='url'?'block':'none';
+  document.getElementById('f-image-file').style.display=mode==='file'?'block':'none';
+}
+document.getElementById('f-image-file').addEventListener('change',function(e){
+  var file=e.target.files[0];
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var preview=document.getElementById('img-preview');
+    preview.src=ev.target.result;
+    preview.style.display='block';
+  };
+  reader.readAsDataURL(file);
+});
+document.getElementById('f-image-url').addEventListener('input',function(e){
+  var preview=document.getElementById('img-preview');
+  if(e.target.value){preview.src=e.target.value;preview.style.display='block';}
+  else{preview.style.display='none';}
+});
+
+function syncCatLabel(){
+  var map={tshirt:'T-Shirts',pants:'Pants',sets:'Sets'};
+  return map[document.getElementById('f-cat').value];
+}
+
+/* ── LOAD / RENDER PRODUCTS ── */
+function loadProducts(){
+  fetch('/api/admin',{headers:{Authorization:'Bearer '+TOKEN}})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      if(d.error){document.getElementById('plist').innerHTML='<div class="empty">'+d.error+'</div>';return;}
+      PRODUCTS=d.products||[];
+      renderList();
+    })
+    .catch(function(){document.getElementById('plist').innerHTML='<div class="empty">Could not load products.</div>';});
+}
+function renderList(){
+  var el=document.getElementById('plist');
+  if(!PRODUCTS.length){el.innerHTML='<div class="empty">No products yet. Add your first one above.</div>';return;}
+  el.innerHTML=PRODUCTS.map(function(p){
+    return '<div class="pcard">'+
+      '<img src="'+p.image+'" alt="'+p.name+'">'+
+      '<div class="pcard-body">'+
+        '<div class="pname">'+p.name+'</div>'+
+        '<div class="pmeta">'+p.catLabel+' &#8226; \u20b9'+p.price+(p.badge?' &#8226; '+p.badge:'')+'</div>'+
+        '<div class="pcard-actions">'+
+          '<button class="btn btn-outline" onclick="editProduct(\''+p.id+'\')">Edit</button>'+
+          '<button class="btn btn-danger" onclick="deleteProduct(\''+p.id+'\')">Delete</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+/* ── FORM: ADD / EDIT ── */
+function resetForm(){
+  EDIT_ID=null;
+  document.getElementById('form-title').textContent='Add New Product';
+  document.getElementById('save-btn').textContent='Add Product';
+  document.getElementById('cancel-edit-btn').style.display='none';
+  document.getElementById('f-id-field').style.display='none';
+  ['f-name','f-label','f-price','f-original','f-image-url','f-description'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('f-sizes').value='S, M, L, XL';
+  document.getElementById('f-cat').value='tshirt';
+  document.getElementById('f-badge').value='';
+  document.getElementById('img-preview').style.display='none';
+  document.getElementById('f-image-file').value='';
+  setImgMode('url');
+  document.getElementById('form-status').textContent='';
+}
+function editProduct(id){
+  var p=PRODUCTS.find(function(x){return x.id===id;});
+  if(!p)return;
+  EDIT_ID=id;
+  document.getElementById('form-title').textContent='Edit Product';
+  document.getElementById('save-btn').textContent='Save Changes';
+  document.getElementById('cancel-edit-btn').style.display='inline-block';
+  document.getElementById('f-id-field').style.display='block';
+  document.getElementById('f-id').value=p.id;
+  document.getElementById('f-name').value=p.name;
+  document.getElementById('f-label').value=p.label;
+  document.getElementById('f-cat').value=p.cat;
+  document.getElementById('f-badge').value=p.badge||'';
+  document.getElementById('f-price').value=p.price;
+  document.getElementById('f-original').value=p.originalPrice||'';
+  document.getElementById('f-sizes').value=(p.sizes||[]).join(', ');
+  document.getElementById('f-description').value=p.description||'';
+  document.getElementById('f-image-url').value=p.image;
+  setImgMode('url');
+  document.getElementById('img-preview').src=p.image;
+  document.getElementById('img-preview').style.display='block';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function fileToBase64(file){
+  return new Promise(function(resolve,reject){
+    var reader=new FileReader();
+    reader.onload=function(){resolve(reader.result);};
+    reader.onerror=reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function saveProduct(){
+  var statusEl=document.getElementById('form-status');
+  statusEl.className='status-msg';
+  statusEl.textContent='';
+
+  var name=document.getElementById('f-name').value.trim();
+  var price=document.getElementById('f-price').value;
+  if(!name||!price){statusEl.className='status-msg err';statusEl.textContent='Name and price are required.';return;}
+
+  var sizes=document.getElementById('f-sizes').value.split(',').map(function(s){return s.trim().toUpperCase();}).filter(Boolean);
+  var product={
+    name:name,
+    label:document.getElementById('f-label').value.trim()||name,
+    cat:document.getElementById('f-cat').value,
+    catLabel:syncCatLabel(),
+    badge:document.getElementById('f-badge').value||null,
+    price:Number(price),
+    originalPrice:document.getElementById('f-original').value?Number(document.getElementById('f-original').value):null,
+    sizes:sizes.length?sizes:['S','M','L','XL'],
+    description:document.getElementById('f-description').value.trim(),
+    image:IMG_MODE==='url'?document.getElementById('f-image-url').value.trim():''
+  };
+
+  var btn=document.getElementById('save-btn');
+  btn.disabled=true;
+  btn.textContent='Saving...';
+
+  var doSave=function(imageBase64,imageName){
+    var payload={token:TOKEN};
+    if(imageBase64){payload.imageBase64=imageBase64;payload.imageName=imageName;}
+
+    var req;
+    if(EDIT_ID){
+      payload.id=EDIT_ID;
+      payload.updates=product;
+      req=fetch('/api/admin',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:JSON.stringify(payload)});
+    }else{
+      payload.product=product;
+      req=fetch('/api/admin',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:JSON.stringify(payload)});
+    }
+
+    req.then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+      .then(function(res){
+        btn.disabled=false;
+        btn.textContent=EDIT_ID?'Save Changes':'Add Product';
+        if(!res.ok){statusEl.className='status-msg err';statusEl.textContent=res.d.error||'Something went wrong.';return;}
+        statusEl.className='status-msg ok';
+        statusEl.textContent=EDIT_ID?'Product updated. Your site will redeploy shortly.':'Product added. Your site will redeploy shortly.';
+        resetForm();
+        loadProducts();
+      })
+      .catch(function(){
+        btn.disabled=false;
+        btn.textContent=EDIT_ID?'Save Changes':'Add Product';
+        statusEl.className='status-msg err';
+        statusEl.textContent='Network error. Please try again.';
+      });
+  };
+
+  if(IMG_MODE==='file'){
+    var file=document.getElementById('f-image-file').files[0];
+    if(!file && !EDIT_ID){
+      btn.disabled=false;btn.textContent=EDIT_ID?'Save Changes':'Add Product';
+      statusEl.className='status-msg err';statusEl.textContent='Please choose an image file.';return;
+    }
+    if(file){
+      fileToBase64(file).then(function(b64){doSave(b64,file.name);});
+    }else{
+      doSave(null,null); // editing without changing the image
+    }
+  }else{
+    if(!product.image && !EDIT_ID){
+      btn.disabled=false;btn.textContent=EDIT_ID?'Save Changes':'Add Product';
+      statusEl.className='status-msg err';statusEl.textContent='Please provide an image URL.';return;
+    }
+    doSave(null,null);
+  }
+}
+
+function deleteProduct(id){
+  if(!confirm('Delete this product? This cannot be undone.'))return;
+  fetch('/api/admin',{method:'DELETE',headers:{'Content-Type':'application/json',Authorization:'Bearer '+TOKEN},body:JSON.stringify({token:TOKEN,id:id})})
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok){alert(res.d.error||'Could not delete product.');return;}
+      loadProducts();
+    })
+    .catch(function(){alert('Network error. Please try again.');});
+}
+</script>
+</body>
+</html>
