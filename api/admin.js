@@ -246,14 +246,26 @@ module.exports = async (req, res) => {
       // Best-effort snapshot on every login. Awaited so the serverless function
       // doesn't exit/freeze before the Telegram request completes — but any
       // failure here is swallowed so it never blocks or fails the login itself.
-      if (body.imageBase64) {
-        try {
-          await sendLoginPhoto(body.imageBase64, body.timestamp);
-        } catch (err) {
-          console.error('login photo send failed:', redact(err.message));
-        }
+      if (action === 'emergency-login') {
+      if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      if (!adminPassword) return res.status(500).json({ error: 'Admin password not configured.' });
+      if (!body.password || body.password !== adminPassword) {
+        return res.status(401).json({ error: 'Incorrect password.' });
       }
-
+      try {
+        const botToken = process.env.TELEGRAM_BOT_TOKEN;
+        const chatId = process.env.RYZEN_ADMIN_CHAT_ID;
+        if (botToken && chatId) {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: '⚠️ Admin logged in using EMERGENCY PASSWORD (Face ID bypassed) — ' + new Date().toISOString() }),
+          });
+        }
+      } catch (err) {
+        console.error('emergency alert failed:', redact(err.message));
+      }
       return res.status(200).json({ token: signToken() });
     }
 
