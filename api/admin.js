@@ -1,8 +1,12 @@
 // api/admin.js
-// Login + dashboard summary.
+// Login + dashboard summary + login history.
+
 const { signToken, requireAuth, TOKEN_TTL_MS } = require('./_lib/auth');
 const { supabase } = require('./_lib/supabase');
 const { verifyPassword } = require('./_lib/passwords');
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // bootstrap fallback only
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
 const FULL_PERMISSIONS = {
   products: { view: true, edit: true, delete: true },
@@ -13,77 +17,86 @@ const FULL_PERMISSIONS = {
 };
 
 function getClientIp(req) {
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) return forwarded.split(',')[0].trim();
-  return req.socket?.remoteAddress || 'unknown';
+  const fwd = req.headers['x-forwarded-for'];
+  if (fwd) return String(fwd).split(',')[0].trim();
+  return req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : null;
 }
 
-async function logLogin(adminId, req) {
+async function logAttempt(req, { username, role, success, reason }) {
   try {
-    await supabase.from('admin_logins').insert({
-      admin_id: adminId,
+    await supabase.from('login_logs').insert([{
+      username: username || null,
+      role: role || null,
       ip_address: getClientIp(req),
-      user_agent: req.headers['user-agent'] || 'unknown',
-    });
+      user_agent: req.headers['user-agent'] || null,
+      success: !!success,
+      reason: reason || null,
+    }]);
   } catch (err) {
-    console.error('logLogin failed:', err.message);
+    console.error('login_logs insert failed:', err.message);
   }
 }
 
 async function handleLogin(req, res) {
   const { username, password } = req.body || {};
 
-  if (!username || !password) {
-    return res.status(400).json({ error: 'Username and password are required.' });
+  if (!ADMIN_SECRET) {
+    return res.status(500).json({
+      error: 'Server not configured: ADMIN_SECRET missing in Vercel environment variables.',
+    });
   }
 
-  const { data: admin, error } = await supabase
-    .from('admins')
-    .select('*')
-    .eq('username', username)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  if (!admin || !verifyPassword(password, admin.password_hash)) {
-    return res.status(401).json({ error: 'Incorrect username or password.' });
+  if (!password) {
+    await logAttempt(req, { username, success: false, reason: 'missing_password' });
+    return res.status(400).json({ error: 'Password is required.' });
   }
 
-  if (admin.deactivated_at) {
-    return res.status(401).json({ error: 'This account has been deactivated.' });
+  if (username) {
+    const { data: admin, error } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('username', username)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!admin || !verifyPassword(password, admin.password_hash)) {
+      await logAttempt(req, { username, success: false, reason: 'bad_credentials' });
+      return res.status(401).json({ error: 'Incorrect username or password.' });
+    }
+
+    const token = signToken({
+      role: admin.role,
+      username: admin.username,
+      permissions: admin.role === 'super_admin' ? FULL_PERMISSIONS : (admin.permissions || {}),
+      exp: Date.now() + TOKEN_TTL_MS,
+    });
+    await logAttempt(req, { username: admin.username, role: admin.role, success: true });
+    return res.status(200).json({ token, expiresInMs: TOKEN_TTL_MS, role: admin.role });
   }
 
-  await logLogin(admin.id, req);
+  if (!ADMIN_PASSWORD) {
+    return res.status(500).json({
+      error: 'Server not configured: ADMIN_PASSWORD missing in Vercel environment variables.',
+    });
+  }
+  if (password !== ADMIN_PASSWORD) {
+    await logAttempt(req, { username: 'owner', success: false, reason: 'bad_bootstrap_password' });
+    return res.status(401).json({ error: 'Incorrect password.' });
+  }
 
   const token = signToken({
-    sub: admin.id,
-    role: admin.role,
-    username: admin.username,
-    permissions: admin.role === 'super_admin' ? FULL_PERMISSIONS : (admin.permissions || {}),
+    role: 'super_admin',
+    username: 'owner',
+    permissions: FULL_PERMISSIONS,
     exp: Date.now() + TOKEN_TTL_MS,
   });
-
-  return res.status(200).json({
-    token,
-    expiresInMs: TOKEN_TTL_MS,
-    role: admin.role,
-    mustChangePassword: !!admin.must_change_password,
-  });
+  await logAttempt(req, { username: 'owner', role: 'super_admin', success: true });
+  return res.status(200).json({ token, expiresInMs: TOKEN_TTL_MS, role: 'super_admin' });
 }
 
 async function handleDashboard(req, res) {
   const session = requireAuth(req, res);
   if (!session) return;
-
-  const { data: admin } = await supabase
-    .from('admins')
-    .select('deactivated_at')
-    .eq('id', session.sub)
-    .maybeSingle();
-
-  if (admin?.deactivated_at) {
-    return res.status(401).json({ error: 'This account has been deactivated.' });
-  }
 
   let productCount = 0;
   let pageCount = 0;
@@ -109,6 +122,24 @@ async function handleDashboard(req, res) {
   });
 }
 
+async function handleLoginLogs(req, res) {
+  const session = requireAuth(req, res);
+  if (!session) return;
+
+  if (session.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Only the super admin can view login history.' });
+  }
+
+  const { data, error } = await supabase
+    .from('login_logs')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) throw error;
+  return res.status(200).json({ logs: data });
+}
+
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -121,6 +152,7 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === 'POST' && action === 'login') return await handleLogin(req, res);
     if (req.method === 'GET' && action === 'dashboard') return await handleDashboard(req, res);
+    if (req.method === 'GET' && action === 'login-logs') return await handleLoginLogs(req, res);
     return res.status(400).json({ error: 'Unknown action: ' + action });
   } catch (err) {
     console.error('admin.js error:', err);
