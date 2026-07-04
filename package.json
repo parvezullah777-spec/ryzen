@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "razorpay": "^2.9.4"
+    "razorpay": "^2.9.4",
+    "@vladmandic/face-api": "^1.7.13",
+"@tensorflow/tfjs-node": "^4.20.0"
   }
 }
