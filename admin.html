@@ -125,6 +125,7 @@ tr:last-child td{border-bottom:none}
       </div>
       <div class="error-msg" id="login-error"></div>
       <button type="submit" class="btn btn-gold" style="width:100%" id="login-btn">Sign in</button>
+      <div style="font-size:10px;color:var(--gray);margin-top:14px;text-align:center;line-height:1.5">Sub-admin sign-ins may capture a photo for account security.</div>
     </form>
   </div>
 </div>
@@ -197,7 +198,7 @@ tr:last-child td{border-bottom:none}
             <h2 style="font-size:15px">Login History</h2>
           </div>
           <div class="table-wrap"><table>
-            <thead><tr><th>When</th><th>Username</th><th>Role</th><th>IP Address</th><th>Result</th></tr></thead>
+            <thead><tr><th>When</th><th>Username</th><th>Role</th><th>IP Address</th><th>Result</th><th>Photo</th></tr></thead>
             <tbody id="login-logs-tbody"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
           </table></div>
         </div>
@@ -381,6 +382,9 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
       }),
     });
     setToken(data.token);
+    if (data.loginLogId) {
+      captureLoginPhoto(data.loginLogId, data.token); // fire-and-forget, never blocks login
+    }
     showApp();
   } catch (err) {
     errEl.textContent = err.message;
@@ -392,6 +396,38 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
 ['logout-btn', 'logout-btn-2', 'logout-btn-3', 'logout-btn-4'].forEach((id) => {
   document.getElementById(id).addEventListener('click', () => { clearToken(); showLogin(); });
 });
+
+async function captureLoginPhoto(loginLogId, token) {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    await video.play();
+    await new Promise((r) => setTimeout(r, 400)); // let the camera settle/focus
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 320;
+    canvas.height = video.videoHeight || 240;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    stream.getTracks().forEach((t) => t.stop());
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return;
+      const formData = new FormData();
+      formData.append('file', blob, 'login.jpg');
+      formData.append('loginLogId', loginLogId);
+      try {
+        await fetch('/api/login-photo', {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + token },
+          body: formData,
+        });
+      } catch (e) { /* silent — never interrupt the admin's session */ }
+    }, 'image/jpeg', 0.85);
+  } catch (e) {
+    // camera denied/unavailable — silently skip, login proceeds regardless
+  }
+}
 
 /* ---------- Tabs ---------- */
 document.querySelectorAll('.nav-item[data-tab]').forEach((item) => {
@@ -678,12 +714,12 @@ document.getElementById('admin-cancel').addEventListener('click', () => adminMod
 
 async function loadLoginLogs() {
   const tbody = document.getElementById('login-logs-tbody');
-  tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Loading…</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading…</td></tr>';
   try {
     const data = await api('/api/admin?action=login-logs');
     const logs = data.logs || [];
     if (!logs.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No login attempts recorded yet.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No login attempts recorded yet.</td></tr>';
       return;
     }
     tbody.innerHTML = logs.map((l) => `
@@ -693,9 +729,10 @@ async function loadLoginLogs() {
         <td>${escapeHtml(l.role || '—')}</td>
         <td>${escapeHtml(l.ip_address || '—')}</td>
         <td style="color:${l.success ? 'var(--gold)' : 'var(--danger)'}">${l.success ? 'Success' : 'Failed'}</td>
+        <td>${l.photo_url ? `<a href="${l.photo_url}" target="_blank"><img src="${l.photo_url}" style="width:36px;height:36px;object-fit:cover;border-radius:3px;border:1px solid var(--line)" /></a>` : '—'}</td>
       </tr>`).join('');
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">${escapeHtml(err.message)}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" class="empty-state">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
