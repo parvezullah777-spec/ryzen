@@ -1,29 +1,71 @@
 // api/admin.js
-// Login + dashboard summary. Products, Pages, and the AI Assistant each
-// live in their own file (products.js, pages.js, assistant.js) and share
-// the auth/github helpers in api/_lib/.
+// Login + dashboard summary.
 
 const { signToken, requireAuth, TOKEN_TTL_MS } = require('./_lib/auth');
-const { getJSON } = require('./_lib/github');
+const { supabase } = require('./_lib/supabase');
+const { verifyPassword } = require('./_lib/passwords');
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // bootstrap fallback only
 const ADMIN_SECRET = process.env.ADMIN_SECRET;
 
-async function handleLogin(req, res) {
-  const { password } = req.body || {};
+const FULL_PERMISSIONS = {
+  products: { view: true, edit: true, delete: true },
+  pages: { view: true, edit: true, delete: true },
+  orders: { view: true, edit: true },
+  traffic: { view: true },
+  admins: { view: true, edit: true, delete: true },
+};
 
-  if (!ADMIN_PASSWORD || !ADMIN_SECRET) {
+async function handleLogin(req, res) {
+  const { username, password } = req.body || {};
+
+  if (!ADMIN_SECRET) {
     return res.status(500).json({
-      error: 'Server not configured: ADMIN_PASSWORD and/or ADMIN_SECRET missing in Vercel environment variables.',
+      error: 'Server not configured: ADMIN_SECRET missing in Vercel environment variables.',
     });
   }
 
-  if (!password || password !== ADMIN_PASSWORD) {
+  if (!password) {
+    return res.status(400).json({ error: 'Password is required.' });
+  }
+
+  if (username) {
+    const { data: admin, error } = await supabase
+      .from('admins')
+      .select('*')
+      .eq('username', username)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!admin || !verifyPassword(password, admin.password_hash)) {
+      return res.status(401).json({ error: 'Incorrect username or password.' });
+    }
+
+    const token = signToken({
+      role: admin.role,
+      username: admin.username,
+      permissions: admin.role === 'super_admin' ? FULL_PERMISSIONS : (admin.permissions || {}),
+      exp: Date.now() + TOKEN_TTL_MS,
+    });
+    return res.status(200).json({ token, expiresInMs: TOKEN_TTL_MS, role: admin.role });
+  }
+
+  if (!ADMIN_PASSWORD) {
+    return res.status(500).json({
+      error: 'Server not configured: ADMIN_PASSWORD missing in Vercel environment variables.',
+    });
+  }
+  if (password !== ADMIN_PASSWORD) {
     return res.status(401).json({ error: 'Incorrect password.' });
   }
 
-  const token = signToken({ role: 'admin', exp: Date.now() + TOKEN_TTL_MS });
-  return res.status(200).json({ token, expiresInMs: TOKEN_TTL_MS });
+  const token = signToken({
+    role: 'super_admin',
+    username: 'owner',
+    permissions: FULL_PERMISSIONS,
+    exp: Date.now() + TOKEN_TTL_MS,
+  });
+  return res.status(200).json({ token, expiresInMs: TOKEN_TTL_MS, role: 'super_admin' });
 }
 
 async function handleDashboard(req, res) {
@@ -34,21 +76,23 @@ async function handleDashboard(req, res) {
   let pageCount = 0;
 
   try {
-    const { data: products } = await getJSON('products.json');
-    productCount = Array.isArray(products) ? products.length : 0;
+    const { count } = await supabase.from('products').select('*', { count: 'exact', head: true });
+    productCount = count || 0;
   } catch (err) {
-    console.error('dashboard: products.json read failed:', err.message);
+    console.error('dashboard: products count failed:', err.message);
   }
 
   try {
-    const { data: pages } = await getJSON('pages.json');
-    pageCount = Array.isArray(pages) ? pages.length : 0;
+    const { count } = await supabase.from('pages').select('*', { count: 'exact', head: true });
+    pageCount = count || 0;
   } catch (err) {
-    console.error('dashboard: pages.json read failed:', err.message);
+    console.error('dashboard: pages count failed:', err.message);
   }
 
   return res.status(200).json({
     stats: { products: productCount, pages: pageCount, orders: 0 },
+    role: session.role,
+    permissions: session.permissions || {},
   });
 }
 
