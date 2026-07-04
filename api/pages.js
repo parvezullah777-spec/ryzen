@@ -1,10 +1,11 @@
 const { supabase } = require('./_lib/supabase');
-const { verifyToken } = require('./_lib/auth');
+const { requireAuth } = require('./_lib/auth');
 
-function requireAuth(req) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  return verifyToken(token);
+function checkPerm(session, action) {
+  if (session.role === 'super_admin') return true;
+  const perm = (session.permissions && session.permissions.pages) || {};
+  if (action === 'delete') return !!perm.delete;
+  return !!perm.edit; // create/update
 }
 
 function toApi(row) {
@@ -29,10 +30,12 @@ module.exports = async (req, res) => {
   const action = req.query.action;
 
   try {
+    let session = null;
     if (action !== 'list' && action !== 'get') {
-      const payload = requireAuth(req);
-      if (!payload) {
-        return res.status(401).json({ error: 'Session expired, please log in again.' });
+      session = requireAuth(req, res);
+      if (!session) return;
+      if (!checkPerm(session, action)) {
+        return res.status(403).json({ error: 'You do not have permission to do that.' });
       }
     }
 
@@ -65,7 +68,6 @@ module.exports = async (req, res) => {
       if (!title) return res.status(400).json({ error: 'Title is required' });
 
       let slug = slugify(title);
-      // ensure uniqueness by appending a short suffix if needed
       const { data: existing } = await supabase.from('pages').select('slug').eq('slug', slug).maybeSingle();
       if (existing) slug = `${slug}-${Date.now().toString(36)}`;
 
