@@ -1,18 +1,14 @@
 const { supabase } = require('./_lib/supabase');
-const { verifySession } = require('./_lib/auth'); // adjust to match your actual export name
+const { verifyToken } = require('./_lib/auth');
 
 module.exports = async (req, res) => {
   // --- Auth check for write operations ---
   // GET is public (storefront reads products), everything else requires admin session
   if (req.method !== 'GET') {
-    try {
-      const authHeader = req.headers.authorization || '';
-      const token = authHeader.replace('Bearer ', '');
-      const valid = await verifySession(token);
-      if (!valid) {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-    } catch (err) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.replace('Bearer ', '');
+    const payload = verifyToken(token);
+    if (!payload) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
