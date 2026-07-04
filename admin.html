@@ -147,6 +147,12 @@
       <button class="btn btn-outline" onclick="retryFaceCheck()">Try Again</button>
       <button class="btn btn-outline" onclick="logoutFromFaceCheck()">Log Out</button>
     </div>
+    <p style="margin-top:14px;"><a href="#" onclick="showEmergencyLogin();return false;" style="color:var(--gray);font-size:12px;">Camera not working? Use emergency code</a></p>
+    <div id="emergency-login-row" style="display:none;margin-top:10px;">
+      <input type="password" id="emergency-code-input" placeholder="Emergency access code" onkeydown="if(event.key==='Enter')submitEmergencyLogin()">
+      <button class="btn" style="width:100%" onclick="submitEmergencyLogin()">Verify</button>
+      <div class="err-msg" id="emergency-login-err"></div>
+    </div>
   </div>
 </div>
 
@@ -899,10 +905,25 @@ function denyAccess(){
 function retryFaceCheck(){
   runFaceCheck();
 }
-function logoutFromFaceCheck(){
-  stopCamera(document.getElementById('face-check-video'));
-  document.getElementById('face-check-view').style.display='none';
-  logout();
+function showEmergencyLogin(){
+  document.getElementById('emergency-login-row').style.display='block';
+}
+function submitEmergencyLogin(){
+  var code=document.getElementById('emergency-code-input').value;
+  var errEl=document.getElementById('emergency-login-err');
+  errEl.textContent='';
+  if(!code){errEl.textContent='Enter the emergency code.';return;}
+  fetch('/api/admin?action=emergency-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:code})})
+    .then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok){errEl.textContent=res.d.error||'Invalid code.';return;}
+      TOKEN=res.d.token;
+      sessionStorage.setItem('ryzen_admin_token',TOKEN);
+      stopCamera(document.getElementById('face-check-video'));
+      document.getElementById('face-check-view').style.display='none';
+      showApp();
+    })
+    .catch(function(){errEl.textContent='Network error. Try again.';});
 }
 function finishFaceCheck(){
   stopCamera(document.getElementById('face-check-video'));
