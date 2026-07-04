@@ -1,6 +1,6 @@
 const { requireAuth } = require('./_lib/auth');
 const { supabase } = require('./_lib/supabase');
-const { hashPassword } = require('./_lib/passwords');
+const { hashPassword } = require('./_lib/password');
 
 function toApi(row) {
   return {
@@ -9,7 +9,22 @@ function toApi(row) {
     role: row.role,
     permissions: row.permissions || {},
     createdAt: row.created_at,
+    deactivatedAt: row.deactivated_at,
+    mustChangePassword: row.must_change_password,
   };
+}
+
+async function logAction(actorId, action, targetId, details = {}) {
+  try {
+    await supabase.from('admin_logs').insert({
+      actor_id: actorId,
+      action,
+      target_id: targetId,
+      details,
+    });
+  } catch (err) {
+    console.error('logAction failed:', err.message);
+  }
 }
 
 module.exports = async (req, res) => {
@@ -46,11 +61,13 @@ module.exports = async (req, res) => {
           password_hash: hashPassword(password),
           role: 'sub_admin',
           permissions: permissions || {},
+          must_change_password: true,
         }])
         .select()
         .single();
 
       if (error) throw error;
+      await logAction(session.sub, 'create_admin', data.id, { username });
       return res.status(201).json({ admin: toApi(data) });
     }
 
@@ -60,7 +77,10 @@ module.exports = async (req, res) => {
 
       const updates = { updated_at: new Date().toISOString() };
       if (permissions !== undefined) updates.permissions = permissions;
-      if (password) updates.password_hash = hashPassword(password);
+      if (password) {
+        updates.password_hash = hashPassword(password);
+        updates.must_change_password = true;
+      }
 
       const { data, error } = await supabase
         .from('admins')
@@ -70,6 +90,7 @@ module.exports = async (req, res) => {
         .single();
 
       if (error) throw error;
+      await logAction(session.sub, password ? 'reset_password' : 'update_permissions', id);
       return res.status(200).json({ admin: toApi(data) });
     }
 
@@ -77,8 +98,18 @@ module.exports = async (req, res) => {
       const { id } = req.body;
       if (!id) return res.status(400).json({ error: 'Admin id is required.' });
 
-      const { error } = await supabase.from('admins').delete().eq('id', id);
+      const { data: target } = await supabase.from('admins').select('role').eq('id', id).single();
+      if (target?.role === 'super_admin') {
+        return res.status(403).json({ error: 'Cannot deactivate the super admin.' });
+      }
+
+      const { error } = await supabase
+        .from('admins')
+        .update({ deactivated_at: new Date().toISOString() })
+        .eq('id', id);
+
       if (error) throw error;
+      await logAction(session.sub, 'deactivate_admin', id);
       return res.status(200).json({ success: true });
     }
 
