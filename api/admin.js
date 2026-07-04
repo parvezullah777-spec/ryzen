@@ -3,7 +3,7 @@
 
 const { signToken, requireAuth, TOKEN_TTL_MS } = require('./_lib/auth');
 const { supabase } = require('./_lib/supabase');
-const { verifyPassword } = require('./_lib/password');
+const { verifyPassword } = require('./_lib/passwords');
 
 const FULL_PERMISSIONS = {
   products: { view: true, edit: true, delete: true },
