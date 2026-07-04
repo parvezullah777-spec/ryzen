@@ -1,6 +1,6 @@
 const { requireAuth } = require('./_lib/auth');
 const { supabase } = require('./_lib/supabase');
-const { hashPassword } = require('./_lib/password');
+const { hashPassword } = require('./_lib/passwords');
 
 function toApi(row) {
   return {
