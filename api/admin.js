@@ -307,9 +307,7 @@ if (action === 'emergency-login') {
       } catch (err) {
         console.error('emergency alert failed:', redact(err.message));
       }
-      return res.status(200).json({ token: signToken() });
-    }
-
+      
     // ── EVERYTHING BELOW REQUIRES A VALID TOKEN ──
     const token = req.headers.authorization ? req.headers.authorization.replace('Bearer ', '') : body.token;
     if (!verifyToken(token)) {
