@@ -1,10 +1,11 @@
 const { supabase } = require('./_lib/supabase');
-const { verifyToken } = require('./_lib/auth');
+const { requireAuth } = require('./_lib/auth');
 
-function requireAuth(req) {
-  const authHeader = req.headers.authorization || '';
-  const token = authHeader.replace('Bearer ', '');
-  return verifyToken(token);
+function checkPerm(session, action) {
+  if (session.role === 'super_admin') return true;
+  const perm = (session.permissions && session.permissions.products) || {};
+  if (action === 'delete') return !!perm.delete;
+  return !!perm.edit; // create/update
 }
 
 // DB rows use snake_case (Postgres folds unquoted identifiers to lowercase),
@@ -43,10 +44,12 @@ module.exports = async (req, res) => {
 
   try {
     // GET list is public (storefront may need it); all other actions require auth
+    let session = null;
     if (action !== 'list') {
-      const payload = requireAuth(req);
-      if (!payload) {
-        return res.status(401).json({ error: 'Session expired, please log in again.' });
+      session = requireAuth(req, res);
+      if (!session) return;
+      if (!checkPerm(session, action)) {
+        return res.status(403).json({ error: 'You do not have permission to do that.' });
       }
     }
 
