@@ -191,6 +191,16 @@ tr:last-child td{border-bottom:none}
           <thead><tr><th>Username</th><th>Role</th><th>Permissions</th><th></th></tr></thead>
           <tbody id="admins-tbody"><tr><td colspan="4" class="empty-state">Loading…</td></tr></tbody>
         </table></div>
+
+        <div style="margin-top:32px">
+          <div class="section-top">
+            <h2 style="font-size:15px">Login History</h2>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr><th>When</th><th>Username</th><th>Role</th><th>IP Address</th><th>Result</th></tr></thead>
+            <tbody id="login-logs-tbody"><tr><td colspan="5" class="empty-state">Loading…</td></tr></tbody>
+          </table></div>
+        </div>
       </div>
     </div>
   </div>
@@ -392,7 +402,7 @@ document.querySelectorAll('.nav-item[data-tab]').forEach((item) => {
     document.getElementById('tab-' + item.dataset.tab).style.display = 'block';
     if (item.dataset.tab === 'products') loadProducts();
     if (item.dataset.tab === 'pages') loadPages();
-    if (item.dataset.tab === 'admins') loadAdmins();
+    if (item.dataset.tab === 'admins') { loadAdmins(); loadLoginLogs(); }
   });
 });
 
@@ -665,6 +675,29 @@ async function loadAdmins() {
 const adminModal = document.getElementById('admin-modal');
 document.getElementById('add-admin-btn').addEventListener('click', () => openAdminModal());
 document.getElementById('admin-cancel').addEventListener('click', () => adminModal.classList.remove('open'));
+
+async function loadLoginLogs() {
+  const tbody = document.getElementById('login-logs-tbody');
+  tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Loading…</td></tr>';
+  try {
+    const data = await api('/api/admin?action=login-logs');
+    const logs = data.logs || [];
+    if (!logs.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No login attempts recorded yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = logs.map((l) => `
+      <tr>
+        <td>${new Date(l.created_at).toLocaleString()}</td>
+        <td>${escapeHtml(l.username || '—')}</td>
+        <td>${escapeHtml(l.role || '—')}</td>
+        <td>${escapeHtml(l.ip_address || '—')}</td>
+        <td style="color:${l.success ? 'var(--gold)' : 'var(--danger)'}">${l.success ? 'Success' : 'Failed'}</td>
+      </tr>`).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty-state">${escapeHtml(err.message)}</td></tr>`;
+  }
+}
 
 function setPermCheckboxes(perm) {
   perm = perm || {};
