@@ -1,6 +1,7 @@
 const { supabase } = require('./_lib/supabase');
 const { hashPassword, verifyPassword } = require('./_lib/passwords');
 const { signCustomerToken, requireCustomerAuth, TOKEN_TTL_MS } = require('./_lib/customer-auth');
+const { requirePhoneVerification } = require('./otp');
 
 async function getSavedState(customerId) {
   const [{ data: cartRows }, { data: wlRows }, { data: address }] = await Promise.all([
@@ -20,6 +21,14 @@ async function handleSignup(req, res) {
   const { name, email, phone, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
+  }
+
+  // If a phone number is supplied, it must have been verified via OTP first.
+  // The frontend attaches the proof token in this header after a successful
+  // /api/otp?action=verify-widget-token call. Skipping this check would let
+  // someone create accounts with unverified/fake phone numbers.
+  if (phone && !requirePhoneVerification(req, phone)) {
+    return res.status(400).json({ error: 'Phone number not verified. Please verify your phone before continuing.' });
   }
 
   const { data: existing } = await supabase.from('customers').select('id').eq('email', email).maybeSingle();
@@ -140,7 +149,7 @@ async function handleGetState(req, res) {
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Phone-Verify-Token');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const action = req.query.action;
