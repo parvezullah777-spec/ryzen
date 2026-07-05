@@ -1664,6 +1664,7 @@ var msg91Configuration = {
   exposeMethods: "true", // keeps everything invisible -- no MSG91 popup, we use our own modal
   success: function(data){ console.log('MSG91 widget success', data); },
   failure: function(error){ console.log('MSG91 widget failure', error); }
+  window.msg91Ready = false;
 };
 (function loadOtpScript(urls){
   var i = 0;
@@ -1672,10 +1673,11 @@ var msg91Configuration = {
     s.src = urls[i];
     s.async = true;
     s.onload = function(){
-      if (typeof window.initSendOTP === 'function') {
-        window.initSendOTP(msg91Configuration);
-      }
-    };
+  if (typeof window.initSendOTP === 'function') {
+    window.initSendOTP(msg91Configuration);
+    window.msg91Ready = true;
+  }
+};
     s.onerror = function(){
       i++;
       if (i < urls.length) attempt();
