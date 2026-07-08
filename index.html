@@ -369,7 +369,7 @@ select.addr-inp{appearance:none;-webkit-appearance:none;background-image:url("da
         <svg viewBox='0 0 24 24'><path d='M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'/></svg>
         <span class='badge' id='wl-b'>0</span>
       </button>
-      <button class='hico' onclick='openAuth()' style='color:var(--gold);font-weight:700;font-size:11px;letter-spacing:1px;padding:8px 12px;border:1px solid var(--gold);border-radius:4px'>
+      <button class='hico' onclick='open()' style='color:var(--gold);font-weight:700;font-size:11px;letter-spacing:1px;padding:8px 12px;border:1px solid var(--gold);border-radius:4px'>
         SIGN IN
       </button>
       <button class='hbg' onclick='openMobNav()'>
@@ -407,7 +407,7 @@ select.addr-inp{appearance:none;-webkit-appearance:none;background-image:url("da
     <p class='hero-sub'>Expertly crafted Italian designer wear for the discerning modern man & World class Tradional wear. Premium fabrics, timeless tailoring, everyday luxury.</p>
     <div class='hero-btns'>
       <button class='btn btn-gold' onclick='scrollTo("#shop")'>Shop Now</button>
-      <button class='btn btn-ow' onclick='openAuth()'>Join Membership</button>
+      <button class='btn btn-ow' onclick='open()'>Join Membership</button>
     </div>
     <div class='hero-stats'>
       <div>
@@ -496,7 +496,7 @@ select.addr-inp{appearance:none;-webkit-appearance:none;background-image:url("da
     <p class='eyebrow'>About Ryzen</p>
     <h2 class='about-h'>Crafted For<br/>The Modern Man</h2>
     <p class='about-p'>Ryzen is more than a clothing brand. It's a mindset. We create premium menswear for those who value quality, confidence and individuality. Every piece elevates your everyday.</p>
-    <button class='btn btn-ow' onclick='openAuth()'>Our Story &rarr;</button>
+    <button class='btn btn-ow' onclick='open()'>Our Story &rarr;</button>
   </div>
   <div class='about-img'>
     <img alt='About Ryzen' src='https://images.pexels.com/photos/29138677/pexels-photo-29138677.jpeg?auto=compress&cs=tinysrgb&w=1200&q=80'/>
@@ -696,14 +696,8 @@ function closeSearch(){document.getElementById('srch').classList.remove('open')}
 function openMobNav(){document.getElementById('mnav').classList.add('open')}
 function closeMobNav(){document.getElementById('mnav').classList.remove('open')}
 function openAuth(){
-  var root=document.getElementById('root');
-  if(root){
-    root.style.display='block';
-  }else{
-    window.location.href='/auth';
-  }
+  window.dispatchEvent(new CustomEvent('ryzen:open-auth'));
 }
-
 /* ── HEADER SCROLL ── */
 window.addEventListener('scroll',function(){
   var hdr=document.getElementById('hdr');
