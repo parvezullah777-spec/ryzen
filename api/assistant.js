@@ -6,6 +6,7 @@
 // can only ever return text. Any actual change still has to go through
 // the admin clicking Save on products.js / pages.js.
 
+const { supabase } = require('./_lib/supabase');
 const { requireAuth } = require('./_lib/auth');
 const { getJSON } = require('./_lib/github');
 
@@ -18,7 +19,7 @@ async function buildContext() {
   let pagesSummary = 'No pages loaded.';
 
   try {
-    const { data: products } = await getJSON('products.json');
+    const { data: products } = await getJSON('public/products.json');
     if (Array.isArray(products) && products.length) {
       productsSummary = products
         .slice(0, 50)
@@ -30,12 +31,18 @@ async function buildContext() {
   }
 
   try {
-    const { data: pages } = await getJSON('pages.json');
+    const { data: pages, error } = await supabase
+      .from('pages')
+      .select('slug, title, type')
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
     if (Array.isArray(pages) && pages.length) {
       pagesSummary = pages.map((p) => `- ${p.title} (${p.type}, /${p.slug})`).join('\n');
     }
   } catch (err) {
-    console.error('assistant: failed to load pages.json context:', err.message);
+    console.error('assistant: failed to load pages context:', err.message);
   }
 
   return `Current products in the store:\n${productsSummary}\n\nCurrent pages:\n${pagesSummary}`;
