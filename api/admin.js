@@ -1,12 +1,9 @@
 // api/admin.js
-// Login + dashboard summary + login history.
+// Login + dashboard summary.
 
 const { signToken, requireAuth, TOKEN_TTL_MS } = require('./_lib/auth');
 const { supabase } = require('./_lib/supabase');
-const { verifyPassword } = require('./_lib/passwords');
-
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD; // bootstrap fallback only
-const ADMIN_SECRET = process.env.ADMIN_SECRET;
+const { verifyPassword } = require('./_lib/password');
 
 const FULL_PERMISSIONS = {
   products: { view: true, edit: true, delete: true },
@@ -17,98 +14,111 @@ const FULL_PERMISSIONS = {
 };
 
 function getClientIp(req) {
-  const fwd = req.headers['x-forwarded-for'];
-  if (fwd) return String(fwd).split(',')[0].trim();
-  return req.socket && req.socket.remoteAddress ? req.socket.remoteAddress : null;
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
 }
 
-async function logAttempt(req, { username, role, success, reason }) {
+async function logLogin(adminId, req) {
   try {
-    const { data } = await supabase.from('login_logs').insert([{
-      username: username || null,
-      role: role || null,
+    await supabase.from('admin_logins').insert({
+      admin_id: adminId,
       ip_address: getClientIp(req),
-      user_agent: req.headers['user-agent'] || null,
-      success: !!success,
-      reason: reason || null,
-    }]).select().single();
-    return data;
+      user_agent: req.headers['user-agent'] || 'unknown',
+    });
   } catch (err) {
-    console.error('login_logs insert failed:', err.message);
-    return null;
+    console.error('logLogin failed:', err.message);
+  }
+}
+
+async function sendTelegramAlert(admin, req, faceStatus) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
+
+    const ip = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+    const faceLine = faceStatus === 'mismatch'
+      ? '\n⚠️ FACE MISMATCH'
+      : faceStatus === 'verified'
+      ? '\n✅ Face verified'
+      : '';
+
+    const message =
+      `🔐 Ryzen Admin Login\n` +
+      `User: ${admin.username} (${admin.role})\n` +
+      `IP: ${ip}\n` +
+      `Device: ${userAgent}\n` +
+      `Time: ${time}${faceLine}`;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+    });
+  } catch (err) {
+    console.error('sendTelegramAlert failed:', err.message);
   }
 }
 
 async function handleLogin(req, res) {
   const { username, password } = req.body || {};
 
-  if (!ADMIN_SECRET) {
-    return res.status(500).json({
-      error: 'Server not configured: ADMIN_SECRET missing in Vercel environment variables.',
-    });
+  if (!username || !password) {
+    return res.status(400).json({ error: 'Username and password are required.' });
   }
 
-  if (!password) {
-    await logAttempt(req, { username, success: false, reason: 'missing_password' });
-    return res.status(400).json({ error: 'Password is required.' });
+  const { data: admin, error } = await supabase
+    .from('admins')
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
+
+  if (error) throw error;
+
+  if (!admin || !verifyPassword(password, admin.password_hash)) {
+    return res.status(401).json({ error: 'Incorrect username or password.' });
   }
 
-  if (username) {
-    const { data: admin, error } = await supabase
-      .from('admins')
-      .select('*')
-      .eq('username', username)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (!admin || !verifyPassword(password, admin.password_hash)) {
-      await logAttempt(req, { username, success: false, reason: 'bad_credentials' });
-      return res.status(401).json({ error: 'Incorrect username or password.' });
-    }
-
-    const token = signToken({
-      role: admin.role,
-      username: admin.username,
-      permissions: admin.role === 'super_admin' ? FULL_PERMISSIONS : (admin.permissions || {}),
-      exp: Date.now() + TOKEN_TTL_MS,
-    });
-    const logEntry = await logAttempt(req, { username: admin.username, role: admin.role, success: true });
-    return res.status(200).json({
-      token,
-      expiresInMs: TOKEN_TTL_MS,
-      role: admin.role,
-      loginLogId: logEntry && logEntry.id, // FIX: was restricted to sub_admin only
-    });
+  if (admin.deactivated_at) {
+    return res.status(401).json({ error: 'This account has been deactivated.' });
   }
 
-  if (!ADMIN_PASSWORD) {
-    return res.status(500).json({
-      error: 'Server not configured: ADMIN_PASSWORD missing in Vercel environment variables.',
-    });
-  }
-  if (password !== ADMIN_PASSWORD) {
-    await logAttempt(req, { username: 'owner', success: false, reason: 'bad_bootstrap_password' });
-    return res.status(401).json({ error: 'Incorrect password.' });
-  }
+  await logLogin(admin.id, req);
+  await sendTelegramAlert(admin, req);
 
   const token = signToken({
-    role: 'super_admin',
-    username: 'owner',
-    permissions: FULL_PERMISSIONS,
+    sub: admin.id,
+    role: admin.role,
+    username: admin.username,
+    permissions: admin.role === 'super_admin' ? FULL_PERMISSIONS : (admin.permissions || {}),
     exp: Date.now() + TOKEN_TTL_MS,
   });
-  const logEntry = await logAttempt(req, { username: 'owner', role: 'super_admin', success: true }); // FIX: capture result
+
   return res.status(200).json({
     token,
     expiresInMs: TOKEN_TTL_MS,
-    role: 'super_admin',
-    loginLogId: logEntry && logEntry.id, // FIX: was missing entirely
+    role: admin.role,
+    mustChangePassword: !!admin.must_change_password,
   });
 }
 
 async function handleDashboard(req, res) {
   const session = requireAuth(req, res);
   if (!session) return;
+
+  const { data: admin } = await supabase
+    .from('admins')
+    .select('deactivated_at')
+    .eq('id', session.sub)
+    .maybeSingle();
+
+  if (admin?.deactivated_at) {
+    return res.status(401).json({ error: 'This account has been deactivated.' });
+  }
 
   let productCount = 0;
   let pageCount = 0;
@@ -134,35 +144,6 @@ async function handleDashboard(req, res) {
   });
 }
 
-async function handleLoginLogs(req, res) {
-  const session = requireAuth(req, res);
-  if (!session) return;
-
-  if (session.role !== 'super_admin') {
-    return res.status(403).json({ error: 'Only the super admin can view login history.' });
-  }
-
-  const { data, error } = await supabase
-    .from('login_logs')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(100);
-
-  if (error) throw error;
-
-  const logsWithPhotos = await Promise.all(
-    data.map(async (log) => {
-      if (!log.photo_path) return { ...log, photo_url: null };
-      const { data: signed } = await supabase.storage
-        .from('login-photos')
-        .createSignedUrl(log.photo_path, 3600);
-      return { ...log, photo_url: signed ? signed.signedUrl : null };
-    })
-  );
-
-  return res.status(200).json({ logs: logsWithPhotos });
-}
-
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -175,7 +156,6 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === 'POST' && action === 'login') return await handleLogin(req, res);
     if (req.method === 'GET' && action === 'dashboard') return await handleDashboard(req, res);
-    if (req.method === 'GET' && action === 'login-logs') return await handleLoginLogs(req, res);
     return res.status(400).json({ error: 'Unknown action: ' + action });
   } catch (err) {
     console.error('admin.js error:', err);
