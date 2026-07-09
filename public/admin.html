@@ -134,6 +134,7 @@ tr:last-child td{border-bottom:none}
       </div>
       <div class="error-msg" id="login-error"></div>
       <button type="submit" class="btn btn-gold" style="width:100%" id="login-btn">Sign in</button>
+      <button type="button" class="btn btn-outline" style="width:100%;margin-top:10px" id="faceid-login-btn">Sign in with Face ID</button>
       <div style="font-size:10px;color:var(--gray);margin-top:14px;text-align:center;line-height:1.5">Sub-admin sign-ins may capture a photo for account security.</div>
     </form>
   </div>
@@ -196,7 +197,10 @@ tr:last-child td{border-bottom:none}
         <div class="topbar"><h1>Admins</h1><button class="link-btn" id="logout-btn-4">Log out</button></div>
         <div class="section-top">
           <span style="font-size:12px;color:var(--gray)">Create sub-admins and control exactly what they can see and do.</span>
-          <button class="btn btn-gold btn-sm" id="add-admin-btn">+ Add Sub-Admin</button>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-outline btn-sm" id="setup-faceid-btn">Set up Face ID on this device</button>
+            <button class="btn btn-gold btn-sm" id="add-admin-btn">+ Add Sub-Admin</button>
+          </div>
         </div>
         <div class="table-wrap"><table>
           <thead><tr><th>Username</th><th>Role</th><th>Permissions</th><th></th></tr></thead>
@@ -396,6 +400,18 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
+// --- WebAuthn helpers ---
+function bufToBase64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function base64urlToBuf(b64url) {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/').padStart(b64url.length + (4 - b64url.length % 4) % 4, '=');
+  const str = atob(b64);
+  const buf = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
+  return buf.buffer;
+}
+
 const TOKEN_KEY = 'ryzen_admin_token';
 const getToken = () => localStorage.getItem(TOKEN_KEY);
 const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
@@ -1100,6 +1116,101 @@ document.getElementById('p-image-file').addEventListener('change', async functio
     }
   } catch (err) {
     statusEl.textContent = 'Upload failed: ' + err.message;
+  }
+});
+
+/* ---------- Face ID: registration (already logged in) ---------- */
+document.getElementById('setup-faceid-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('setup-faceid-btn');
+  btn.disabled = true; btn.textContent = 'Waiting for Face ID / Touch ID…';
+  try {
+    const options = await api('/api/webauthn?action=register-options', { method: 'POST' });
+
+    options.challenge = base64urlToBuf(options.challenge);
+    options.user.id = base64urlToBuf(options.user.id);
+    if (options.excludeCredentials) {
+      options.excludeCredentials = options.excludeCredentials.map((c) => ({ ...c, id: base64urlToBuf(c.id) }));
+    }
+
+    const cred = await navigator.credentials.create({ publicKey: options });
+
+    const response = {
+      id: cred.id,
+      rawId: bufToBase64url(cred.rawId),
+      type: cred.type,
+      response: {
+        attestationObject: bufToBase64url(cred.response.attestationObject),
+        clientDataJSON: bufToBase64url(cred.response.clientDataJSON),
+      },
+      clientExtensionResults: cred.getClientExtensionResults(),
+    };
+
+    const deviceName = prompt('Name this device (e.g. "My MacBook", "iPhone")') || 'Unnamed device';
+
+    await api('/api/webauthn?action=register-verify', {
+      method: 'POST',
+      body: JSON.stringify({ response, deviceName }),
+    });
+
+    alert('Face ID / Touch ID set up successfully on this device.');
+  } catch (err) {
+    alert('Setup failed: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Set up Face ID on this device';
+  }
+});
+
+/* ---------- Face ID: login ---------- */
+document.getElementById('faceid-login-btn').addEventListener('click', async () => {
+  const btn = document.getElementById('faceid-login-btn');
+  const errEl = document.getElementById('login-error');
+  const username = document.getElementById('username').value.trim();
+  errEl.textContent = '';
+
+  if (!username) {
+    errEl.textContent = 'Enter your username above, then tap Sign in with Face ID.';
+    return;
+  }
+
+  btn.disabled = true; btn.textContent = 'Waiting for Face ID / Touch ID…';
+  try {
+    const data = await api('/api/webauthn?action=login-options', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+
+    const options = data.options;
+    options.challenge = base64urlToBuf(options.challenge);
+    if (options.allowCredentials) {
+      options.allowCredentials = options.allowCredentials.map((c) => ({ ...c, id: base64urlToBuf(c.id) }));
+    }
+
+    const cred = await navigator.credentials.get({ publicKey: options });
+
+    const response = {
+      id: cred.id,
+      rawId: bufToBase64url(cred.rawId),
+      type: cred.type,
+      response: {
+        authenticatorData: bufToBase64url(cred.response.authenticatorData),
+        clientDataJSON: bufToBase64url(cred.response.clientDataJSON),
+        signature: bufToBase64url(cred.response.signature),
+        userHandle: cred.response.userHandle ? bufToBase64url(cred.response.userHandle) : null,
+      },
+      clientExtensionResults: cred.getClientExtensionResults(),
+    };
+
+    const loginData = await api('/api/webauthn?action=login-verify', {
+      method: 'POST',
+      body: JSON.stringify({ response, adminId: data.adminId }),
+    });
+
+    setToken(loginData.token);
+    showApp();
+  } catch (err) {
+    errEl.textContent = err.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign in with Face ID';
   }
 });
 
