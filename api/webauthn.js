@@ -32,6 +32,59 @@ function takeChallenge(key) {
   return entry.challenge;
 }
 
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (forwarded) return forwarded.split(',')[0].trim();
+  return req.socket?.remoteAddress || 'unknown';
+}
+
+async function logFaceIdLogin(adminId, req) {
+  try {
+    const { data, error } = await supabase
+      .from('admin_logins')
+      .insert({
+        admin_id: adminId,
+        ip_address: getClientIp(req),
+        user_agent: req.headers['user-agent'] || 'unknown',
+        method: 'face_id',
+      })
+      .select('id')
+      .single();
+    if (error) throw error;
+    return data?.id || null;
+  } catch (err) {
+    console.error('logFaceIdLogin failed:', err.message);
+    return null;
+  }
+}
+
+async function sendFaceIdTelegramAlert(admin, req) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
+
+    const ip = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+    const message =
+      `🆔 Ryzen Admin — Face ID Login\n` +
+      `User: ${admin.username} (${admin.role})\n` +
+      `IP: ${ip}\n` +
+      `Device: ${userAgent}\n` +
+      `Time: ${time}`;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+    });
+  } catch (err) {
+    console.error('sendFaceIdTelegramAlert failed:', err.message);
+  }
+}
+
 async function handleRegisterOptions(req, res) {
   const session = requireAuth(req, res);
   if (!session) return;
@@ -196,6 +249,9 @@ async function handleLoginVerify(req, res) {
     .update({ counter: verification.authenticationInfo.newCounter })
     .eq('id', cred.id);
 
+  const loginLogId = await logFaceIdLogin(admin.id, req);
+  await sendFaceIdTelegramAlert(admin, req);
+
   const token = signToken({
     sub: admin.id,
     role: admin.role,
@@ -209,6 +265,7 @@ async function handleLoginVerify(req, res) {
     expiresInMs: TOKEN_TTL_MS,
     role: admin.role,
     mustChangePassword: !!admin.must_change_password,
+    loginLogId,
   });
 }
 
