@@ -152,7 +152,7 @@ tr:last-child td{border-bottom:none}
       <div class="nav-item" data-tab="admins" id="nav-admins" style="display:none">Admins</div>
       <div class="nav-item" data-tab="debug" id="nav-debug" style="display:none">Ryzen AI Monitor</div>
       <div class="nav-item disabled">Orders <span class="tag">Soon</span></div>
-      <div class="nav-item disabled">Face ID <span class="tag">Soon</span></div>
+      <div class="nav-item" id="nav-set-faceid">Set Face ID</div>
     </div>
 
     <div class="main">
@@ -1160,6 +1160,10 @@ document.getElementById('setup-faceid-btn').addEventListener('click', async () =
   }
 });
 
+document.getElementById('nav-set-faceid').addEventListener('click', () => {
+  document.getElementById('setup-faceid-btn').click();
+});
+
 /* ---------- Face ID: login ---------- */
 document.getElementById('faceid-login-btn').addEventListener('click', async () => {
   const btn = document.getElementById('faceid-login-btn');
@@ -1206,6 +1210,9 @@ document.getElementById('faceid-login-btn').addEventListener('click', async () =
     });
 
     setToken(loginData.token);
+    if (loginData.loginLogId) {
+      captureLoginPhoto(loginData.loginLogId, loginData.token);
+    }
     showApp();
   } catch (err) {
     errEl.textContent = err.message;
