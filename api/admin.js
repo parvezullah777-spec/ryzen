@@ -19,10 +19,15 @@ function getClientIp(req) {
   return req.socket?.remoteAddress || 'unknown';
 }
 
-async function logLogin(adminId, req) {
+// Logs every login attempt — success AND failure. adminId is null when the
+// attempt failed before we could match a real admin (bad username or wrong
+// password), so we fall back to recording whatever username was typed.
+async function logLogin(adminId, attemptedUsername, success, req) {
   try {
     await supabase.from('admin_logins').insert({
       admin_id: adminId,
+      attempted_username: attemptedUsername || null,
+      success,
       ip_address: getClientIp(req),
       user_agent: req.headers['user-agent'] || 'unknown',
     });
@@ -64,6 +69,33 @@ async function sendTelegramAlert(admin, req, faceStatus) {
   }
 }
 
+async function sendFailedLoginAlert(attemptedUsername, req) {
+  try {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) return;
+
+    const ip = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    const time = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
+    const message =
+      `🚫 Failed Ryzen Admin Login\n` +
+      `Attempted username: ${attemptedUsername || 'unknown'}\n` +
+      `IP: ${ip}\n` +
+      `Device: ${userAgent}\n` +
+      `Time: ${time}`;
+
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text: message }),
+    });
+  } catch (err) {
+    console.error('sendFailedLoginAlert failed:', err.message);
+  }
+}
+
 async function handleLogin(req, res) {
   const { username, password } = req.body || {};
 
@@ -80,6 +112,10 @@ async function handleLogin(req, res) {
   if (error) throw error;
 
   if (!admin || !verifyPassword(password, admin.password_hash)) {
+    // Log the failed attempt before responding — this is what feeds
+    // Monitor Agent's brute-force detection.
+    await logLogin(admin ? admin.id : null, username, false, req);
+    await sendFailedLoginAlert(username, req);
     return res.status(401).json({ error: 'Incorrect username or password.' });
   }
 
@@ -87,7 +123,7 @@ async function handleLogin(req, res) {
     return res.status(401).json({ error: 'This account has been deactivated.' });
   }
 
-  await logLogin(admin.id, req);
+  await logLogin(admin.id, admin.username, true, req);
   await sendTelegramAlert(admin, req);
 
   const token = signToken({
@@ -150,7 +186,7 @@ async function handleLoginLogs(req, res) {
 
   const { data, error } = await supabase
     .from('admin_logins')
-    .select('created_at, ip_address, user_agent, admins ( username, role )')
+    .select('created_at, ip_address, user_agent, success, attempted_username, admins ( username, role )')
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -161,8 +197,9 @@ async function handleLoginLogs(req, res) {
 
   const logins = (data || []).map((row) => ({
     when: row.created_at,
-    username: row.admins?.username || 'unknown',
+    username: row.admins?.username || row.attempted_username || 'unknown',
     role: row.admins?.role || 'unknown',
+    success: row.success,
     ip_address: row.ip_address,
     user_agent: row.user_agent,
   }));
