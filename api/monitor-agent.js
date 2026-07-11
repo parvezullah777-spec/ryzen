@@ -53,7 +53,7 @@ async function safe(domain, checkName, fn, results) {
 
 // ================= DEBUG =================
 async function runDebugChecks(req, results) {
-  const tables = ['products', 'pages', 'admins', 'login_logs'];
+  const tables = ['products', 'pages', 'admins', 'admin_logins'];
   for (const table of tables) {
     await safe('debug', `db:${table}`, async () => {
       const start = Date.now();
@@ -96,7 +96,7 @@ async function runDebugChecks(req, results) {
 
 // ================= PERFORMANCE =================
 async function runPerformanceChecks(results) {
-  const tables = ['products', 'pages', 'admins', 'login_logs'];
+  const tables = ['products', 'pages', 'admins', 'admin_logins'];
   for (const table of tables) {
     await safe('performance', `latency:${table}`, async () => {
       const start = Date.now();
@@ -144,8 +144,8 @@ async function runSecurityChecks(results) {
   await safe('security', 'failed-login-spike', async () => {
     const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const { data, error } = await supabase
-      .from('login_logs')
-      .select('ip_address, username, created_at')
+      .from('admin_logins')
+      .select('ip_address, attempted_username, created_at')
       .eq('success', false)
       .gte('created_at', since);
     if (error) throw error;
