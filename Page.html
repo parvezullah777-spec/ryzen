@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+<meta charset='UTF-8'/>
+<meta content='width=device-width, initial-scale=1' name='viewport'/>
+<title id='page-title'>Ryzen</title>
+<style>
+  body{font-family:sans-serif;background:#fff;color:#111;max-width:800px;margin:0 auto;padding:40px 24px}
+  h1{font-size:32px;margin-bottom:16px}
+  h2{font-size:24px;margin:24px 0 12px}
+  p{line-height:1.7;color:#333;margin-bottom:16px}
+  img{max-width:100%;display:block;margin:20px 0}
+  #content{min-height:200px}
+  .loading{color:#888;text-align:center;padding:60px 0}
+</style>
+</head>
+<body>
+<div id='content'><div class='loading'>Loading…</div></div>
+
+<script>
+async function loadPage() {
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get('slug');
+  const container = document.getElementById('content');
+
+  if (!slug) {
+    container.innerHTML = '<p>Page not found.</p>';
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/pages?action=get&slug=' + encodeURIComponent(slug));
+    if (!res.ok) {
+      container.innerHTML = '<p>Page not found.</p>';
+      return;
+    }
+    const data = await res.json();
+    const page = data.page;
+
+    document.title = page.title + ' — Ryzen';
+    document.getElementById('page-title').textContent = page.title + ' — Ryzen';
+
+    if (page.type === 'static' && page.html) {
+      container.innerHTML = page.html;
+      return;
+    }
+
+    // Dynamic (content blocks)
+    const blocks = page.blocks || [];
+    container.innerHTML = blocks.map(function(block) {
+      if (block.type === 'heading') return '<h2>' + block.content + '</h2>';
+      if (block.type === 'text') return '<p>' + block.content + '</p>';
+      if (block.type === 'image') return '<img src="' + block.content + '" alt=""/>';
+      return '';
+    }).join('');
+  } catch (err) {
+    console.error('Failed to load page:', err);
+    container.innerHTML = '<p>Something went wrong loading this page.</p>';
+  }
+}
+loadPage();
+</script>
+</body>
+</html>
