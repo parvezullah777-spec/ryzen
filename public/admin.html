@@ -405,13 +405,13 @@ function bufToBase64url(buf) {
   return btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 function base64urlToBuf(b64url) {
-  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/').padStart(b64url.length + (4 - b64url.length % 4) % 4, '=');
+  let b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  while (b64.length % 4) b64 += '=';
   const str = atob(b64);
   const buf = new Uint8Array(str.length);
   for (let i = 0; i < str.length; i++) buf[i] = str.charCodeAt(i);
   return buf.buffer;
 }
-
 const TOKEN_KEY = 'ryzen_admin_token';
 const getToken = () => localStorage.getItem(TOKEN_KEY);
 const setToken = (t) => localStorage.setItem(TOKEN_KEY, t);
