@@ -1,5 +1,7 @@
 // api/webauthn.js
 // WebAuthn (Face ID / Touch ID) registration and login.
+// Written for @simplewebauthn/server v10, which uses base64url STRINGS
+// for user/credential IDs instead of the Buffer-based API from v8/v9.
 
 const {
   generateRegistrationOptions,
@@ -97,12 +99,13 @@ async function handleRegisterOptions(req, res) {
   const options = await generateRegistrationOptions({
     rpName: RP_NAME,
     rpID: getRpID(req),
-    userID: Buffer.from(session.sub),
+    // v10: userID is a plain string, not a Buffer.
+    userID: session.sub,
     userName: session.username,
     attestationType: 'none',
+    // v10: credential descriptors take a base64url string id, no "type" field.
     excludeCredentials: (existing || []).map((c) => ({
-      id: Buffer.from(c.credential_id, 'base64url'),
-      type: 'public-key',
+      id: c.credential_id,
     })),
     authenticatorSelection: {
       authenticatorAttachment: 'platform', // built-in Face ID/Touch ID, not USB keys
@@ -140,13 +143,15 @@ async function handleRegisterVerify(req, res) {
     return res.status(400).json({ error: 'Could not verify device.' });
   }
 
-  const { credentialID, credentialPublicKey, counter } = verification.registrationInfo;
+  // v10: registrationInfo now nests everything under "credential", and
+  // credential.id is already a base64url string (no Buffer conversion needed).
+  const { credential } = verification.registrationInfo;
 
   await supabase.from('admin_webauthn_credentials').insert({
     admin_id: session.sub,
-    credential_id: Buffer.from(credentialID).toString('base64url'),
-    public_key: Buffer.from(credentialPublicKey).toString('base64url'),
-    counter,
+    credential_id: credential.id,
+    public_key: Buffer.from(credential.publicKey).toString('base64url'),
+    counter: credential.counter,
     device_name: deviceName || 'Unnamed device',
   });
 
@@ -179,14 +184,11 @@ async function handleLoginOptions(req, res) {
   const options = await generateAuthenticationOptions({
     rpID: getRpID(req),
     userVerification: 'required',
-    allowCredentials: creds.map((c) => ({
-      id: Buffer.from(c.credential_id, 'base64url'),
-      type: 'public-key',
-    })),
+    // v10: base64url string id, no "type" field.
+    allowCredentials: creds.map((c) => ({ id: c.credential_id })),
   });
 
   storeChallenge('login:' + admin.id, options.challenge);
-  storeChallenge('login-admin:' + options.challenge, admin.id); // reverse lookup for verify step
 
   return res.status(200).json({ options, adminId: admin.id });
 }
@@ -210,9 +212,8 @@ async function handleLoginVerify(req, res) {
     return res.status(401).json({ error: 'This account is unavailable.' });
   }
 
-  const credentialIdB64 = Buffer.isBuffer(response.rawId)
-    ? response.rawId.toString('base64url')
-    : response.id;
+  // v10 + browser: response.id is already the base64url credential id string.
+  const credentialIdB64 = response.id;
 
   const { data: cred } = await supabase
     .from('admin_webauthn_credentials')
@@ -230,9 +231,11 @@ async function handleLoginVerify(req, res) {
       expectedChallenge,
       expectedOrigin: getOrigin(req),
       expectedRPID: getRpID(req),
-      authenticator: {
-        credentialID: Buffer.from(cred.credential_id, 'base64url'),
-        credentialPublicKey: Buffer.from(cred.public_key, 'base64url'),
+      // v10: renamed from "authenticator" to "credential", and publicKey
+      // must be a Uint8Array (Buffer works fine as it extends Uint8Array).
+      credential: {
+        id: cred.credential_id,
+        publicKey: Buffer.from(cred.public_key, 'base64url'),
         counter: cred.counter,
       },
     });
