@@ -4,6 +4,38 @@
 <meta charset='UTF-8'/>
 <meta content='width=device-width, initial-scale=1' name='viewport'/>
 <title>Ryzen &mdash; Rise Beyond Ordinary | Premium Men's Designer Wear</title>
+
+<!-- ── SEO essentials (additive — safe to remove without affecting the site) ── -->
+<meta name='description' content="Ryzen — premium men's designer wear. Expertly crafted shirts, trousers, cargo pants, joggers and co-ord sets in limited-edition drops for the modern Indian gentleman."/>
+<meta name='keywords' content='Ryzen, mens designer wear, premium menswear India, designer shirts, cargo pants, joggers, co-ord sets, mens fashion'/>
+<meta name='robots' content='index, follow'/>
+<link rel='canonical' href='https://ryzen-three.vercel.app/'/>
+
+<meta property='og:type' content='website'/>
+<meta property='og:site_name' content='Ryzen'/>
+<meta property='og:title' content="Ryzen — Rise Beyond Ordinary | Premium Men's Designer Wear"/>
+<meta property='og:description' content="Premium men's designer wear crafted with high-quality fabrics and modern designs. Limited-edition menswear for those who value style, confidence, and individuality."/>
+<meta property='og:url' content='https://ryzen-three.vercel.app/'/>
+<meta property='og:image' content='https://ryzen-three.vercel.app/hero.jpg'/>
+
+<meta name='twitter:card' content='summary_large_image'/>
+<meta name='twitter:title' content="Ryzen — Rise Beyond Ordinary"/>
+<meta name='twitter:description' content="Premium men's designer wear for the modern gentleman."/>
+<meta name='twitter:image' content='https://ryzen-three.vercel.app/hero.jpg'/>
+
+<script type='application/ld+json'>
+{
+  "@context": "https://schema.org",
+  "@type": "ClothingStore",
+  "name": "Ryzen",
+  "url": "https://ryzen-three.vercel.app/",
+  "logo": "https://ryzen-three.vercel.app/hero.jpg",
+  "description": "Premium men's designer wear — shirts, cargo pants, joggers and co-ord sets, crafted in limited-edition drops.",
+  "sameAs": ["https://instagram.com/"]
+}
+</script>
+<!-- ── end SEO essentials ── -->
+
 <link href='https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&amp;family=Montserrat:wght@400;500;600;700;800;900&amp;family=Inter:wght@300;400;500&amp;display=swap' rel='stylesheet'/>
 <style>
 :root{
@@ -328,10 +360,133 @@ select.addr-inp{appearance:none;-webkit-appearance:none;background-image:url("da
 }
 #ryzenAuthOverlay{position:fixed !important;inset:0 !important;z-index:99999 !important;display:flex !important;align-items:center !important;justify-content:center !important;padding:16px !important;background:rgba(0,0,0,.75) !important;}
 </style>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     PREMIUM VISUAL UPGRADE — additive stylesheet only.
+     Nothing above this block was touched: same selectors, same markup
+     requirements, same JS hooks. Everything here either adds new rules
+     or refines existing ones (shadows, transitions, glass, spacing).
+     Safe to remove this whole <style> block to instantly revert. ══════ */
+<style>
+:root{
+  --ease:cubic-bezier(.22,1,.36,1);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --shadow-sm:0 2px 10px rgba(13,13,13,.06);
+  --shadow-md:0 12px 32px rgba(13,13,13,.10);
+  --shadow-lg:0 24px 64px rgba(13,13,13,.16);
+  --shadow-gold:0 8px 28px rgba(201,168,76,.28);
+  --glass-light:rgba(255,255,255,.72);
+  --glass-dark:rgba(17,17,17,.55);
+  --glass-border:rgba(255,255,255,.5);
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important;scroll-behavior:auto !important}
+}
+
+/* ---- typography refinement ---- */
+body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.hero-h1{letter-spacing:-1px;text-shadow:0 4px 30px rgba(0,0,0,.35)}
+.hero-h1 em{text-shadow:0 4px 24px rgba(201,168,76,.35)}
+.hero-sub{letter-spacing:.1px}
+.section-title{letter-spacing:1.5px;position:relative}
+.pname{letter-spacing:.15px}
+.feat-h,.about-h{letter-spacing:-.5px}
+
+/* ---- header: glass on scroll ---- */
+#hdr{transition:box-shadow .4s var(--ease),background .4s var(--ease),backdrop-filter .4s var(--ease)}
+#hdr.scrolled{
+  background:var(--glass-light);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);
+  backdrop-filter:blur(16px) saturate(160%);
+  box-shadow:var(--shadow-md);
+}
+.nav a,.nav-t{transition:color .3s var(--ease)}
+.nav a::after{content:'';position:absolute;left:13px;right:13px;bottom:2px;height:1.5px;background:var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
+.nav a:hover::after,.nav a.act::after{transform:scaleX(1)}
+.hico{transition:color .3s var(--ease),transform .3s var(--ease)}
+.hico:hover{transform:translateY(-1px)}
+.badge{transition:transform .25s var(--ease-spring)}
+.badge.bump{animation:badgeBump .38s var(--ease-spring)}
+@keyframes badgeBump{0%{transform:scale(1)}40%{transform:scale(1.45)}100%{transform:scale(1)}}
+
+/* ---- buttons: shine sweep + lift ---- */
+.btn{position:relative;overflow:hidden;transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease),border-color .3s var(--ease)}
+.btn::before{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);transition:left .55s var(--ease)}
+.btn:hover::before{left:130%}
+.btn-gold:hover{box-shadow:var(--shadow-gold);transform:translateY(-2px)}
+.btn-ow:hover,.btn-od:hover{transform:translateY(-2px)}
+.btn:active{transform:translateY(0) scale(.98)}
+
+/* ---- product cards: lift + depth ---- */
+.pc{transition:transform .45s var(--ease)}
+.pt{transition:box-shadow .45s var(--ease)}
+.pc:hover{transform:translateY(-6px)}
+.pc:hover .pt{box-shadow:var(--shadow-lg)}
+.pt img{transition:transform .7s var(--ease)}
+.wbtn{transition:opacity .3s var(--ease),background .3s var(--ease),transform .3s var(--ease-spring);box-shadow:var(--shadow-sm)}
+.wbtn:hover{transform:scale(1.08)}
+.wbtn.won svg{animation:heartPop .4s var(--ease-spring)}
+@keyframes heartPop{0%{transform:scale(.7)}55%{transform:scale(1.25)}100%{transform:scale(1)}}
+.qvbtn{transition:transform .35s var(--ease),background .3s var(--ease)}
+.sd{transition:all .25s var(--ease)}
+.sd:hover{transform:translateY(-1px);box-shadow:var(--shadow-sm)}
+
+/* ---- scroll reveal (class added additively by enhancement script, harmless if script fails to load) ---- */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .8s var(--ease),transform .8s var(--ease)}
+.reveal.in{opacity:1;transform:translateY(0)}
+
+/* ---- trust bar micro-interaction ---- */
+.titem,.fti{transition:transform .3s var(--ease)}
+.titem:hover,.fti:hover{transform:translateY(-3px)}
+.tico svg,.fti svg{transition:filter .3s var(--ease)}
+.titem:hover .tico svg{filter:drop-shadow(0 0 8px rgba(201,168,76,.5))}
+
+/* ---- featured banner & about: added depth ---- */
+#feat{border-radius:6px;box-shadow:var(--shadow-lg)}
+.about-img img,.feat-bg img{transition:transform 1.2s var(--ease)}
+#about:hover .about-img img,#feat:hover .feat-bg img{transform:scale(1.04)}
+.abadge{box-shadow:var(--shadow-lg);backdrop-filter:blur(6px)}
+
+/* ---- glassmorphism: sidebars, modals ---- */
+#cart-sb,#wl-sb{
+  background:var(--glass-light);
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(160%);
+  box-shadow:-16px 0 60px rgba(13,13,13,.18);
+  transition:right .5s var(--ease);
+}
+.qv-box,.sg-box,.addr-box{
+  background:var(--glass-light);
+  -webkit-backdrop-filter:blur(22px) saturate(160%);
+  backdrop-filter:blur(22px) saturate(160%);
+  border-radius:10px;
+  box-shadow:var(--shadow-lg);
+  border:1px solid var(--glass-border);
+}
+#qv,#sg,#addr{-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px)}
+.ci,.wl-item{transition:background .25s var(--ease)}
+.ci:hover,.wl-item:hover{background:rgba(0,0,0,.015)}
+.qb{transition:all .25s var(--ease)}
+.qb:hover{transform:scale(1.08)}
+
+/* ---- toast: softer depth ---- */
+#toast{box-shadow:var(--shadow-lg);border-radius:4px}
+
+/* ---- hero 3D accent mount point (empty until lazy script runs) ---- */
+#hero-3d-mount{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.2s var(--ease)}
+#hero-3d-mount.ready{opacity:1}
+#hero-3d-mount canvas{width:100% !important;height:100% !important;display:block}
+
+@media(hover:none){
+  .pc:hover{transform:none}
+  .pc:hover .pt{box-shadow:none}
+}
+</style>
 </head>
 <body>
 
-<!-- ANNOUNCEMENT BAR -->
+<!-- ANN BAR -->
 <div id='ann'>
   <div class='msg'>FLAT 15% OFF YOUR FIRST ORDER — USE CODE: RYZEN15</div>
   <div class='links'>
@@ -428,6 +583,7 @@ select.addr-inp{appearance:none;-webkit-appearance:none;background-image:url("da
   <div class='hero-r'>
     <div class='hero-ph'>
       <span>Hero Image Placeholder</span>
+      <div id='hero-3d-mount'></div>
     </div>
   </div>
 </section>
@@ -1359,6 +1515,183 @@ async function loadProducts() {
   }
 }
 document.addEventListener('DOMContentLoaded', loadProducts);
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     PREMIUM VISUAL UPGRADE — additive enhancement script only.
+     Purely visual: scroll-reveal, badge micro-animation, and a lazy,
+     performance-guarded Three.js hero accent. Nothing here touches
+     cart/wishlist/auth/checkout state or calls any API. If this script
+     fails to load entirely, the site behaves exactly as before. ══════ */
+<script>
+(function(){
+  "use strict";
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---- scroll reveal for key sections (purely additive class) ---- */
+  function initReveal(){
+    var targets = document.querySelectorAll('#trust, #shop .shop-hdr, #feat, #about, #ftrust');
+    if(!targets.length) return;
+    targets.forEach(function(el){ el.classList.add('reveal'); });
+    if(reduceMotion || !('IntersectionObserver' in window)){
+      targets.forEach(function(el){ el.classList.add('in'); });
+      return;
+    }
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          entry.target.classList.add('in');
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    targets.forEach(function(el){ io.observe(el); });
+  }
+
+  /* ---- badge bump micro-animation on count change (no logic touched) ---- */
+  function initBadgeBump(){
+    ['cart-b','wl-b'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(!el || !('MutationObserver' in window)) return;
+      var last = el.textContent;
+      var mo = new MutationObserver(function(){
+        if(el.textContent !== last){
+          last = el.textContent;
+          el.classList.remove('bump');
+          void el.offsetWidth; // restart animation
+          el.classList.add('bump');
+        }
+      });
+      mo.observe(el, { childList:true, characterData:true, subtree:true });
+    });
+  }
+
+  /* ---- lightweight hero 3D accent ---- */
+  function shouldSkip3D(){
+    if(reduceMotion) return true;
+    if(window.innerWidth < 480) return true; // keep small phones light
+    var mem = navigator.deviceMemory;
+    var cores = navigator.hardwareConcurrency;
+    if(typeof mem === 'number' && mem < 4) return true;
+    if(typeof cores === 'number' && cores < 4) return true;
+    return false;
+  }
+
+  function initHero3D(){
+    var mount = document.getElementById('hero-3d-mount');
+    if(!mount || shouldSkip3D()) return;
+
+    var started = false;
+    function start(){
+      if(started) return;
+      started = true;
+      loadThreeAndRender(mount);
+    }
+
+    if('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){ if(e.isIntersecting){ start(); io.disconnect(); } });
+      }, { threshold: 0.1 });
+      io.observe(mount);
+    } else {
+      window.addEventListener('load', start, { once:true });
+    }
+  }
+
+  function loadThreeAndRender(mount){
+    // Dynamic import — Three.js is only fetched once the hero is actually
+    // in view, so it never delays first paint or interaction.
+    import('https://unpkg.com/three@0.160.0/build/three.module.js')
+      .then(function(THREE){
+        var width = mount.clientWidth || mount.parentElement.clientWidth;
+        var height = mount.clientHeight || mount.parentElement.clientHeight;
+        if(!width || !height) return;
+
+        var renderer = new THREE.WebGLRenderer({ alpha:true, antialias:true, powerPreference:'low-power' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+        renderer.setSize(width, height);
+        mount.appendChild(renderer.domElement);
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(42, width/height, 0.1, 100);
+        camera.position.set(0, 0, 5.2);
+
+        var geo = new THREE.IcosahedronGeometry(1.35, 1);
+        var mat = new THREE.MeshStandardMaterial({
+          color: 0xC9A84C, metalness: 0.85, roughness: 0.28,
+          emissive: 0x2a1f08, emissiveIntensity: 0.25, wireframe:false
+        });
+        var mesh = new THREE.Mesh(geo, mat);
+        scene.add(mesh);
+
+        var wireGeo = new THREE.IcosahedronGeometry(1.55, 1);
+        var wireMat = new THREE.MeshBasicMaterial({ color:0xE2C27D, wireframe:true, transparent:true, opacity:0.18 });
+        var wireMesh = new THREE.Mesh(wireGeo, wireMat);
+        scene.add(wireMesh);
+
+        var key = new THREE.PointLight(0xE2C27D, 2.2, 12);
+        key.position.set(3, 2, 4);
+        scene.add(key);
+        var fill = new THREE.AmbientLight(0x33261a, 1.1);
+        scene.add(fill);
+
+        var clock = new THREE.Clock();
+        var visible = true;
+        var raf = null;
+
+        function animate(){
+          raf = requestAnimationFrame(animate);
+          var dt = clock.getDelta();
+          mesh.rotation.x += dt * 0.18;
+          mesh.rotation.y += dt * 0.26;
+          wireMesh.rotation.x -= dt * 0.10;
+          wireMesh.rotation.y -= dt * 0.16;
+          renderer.render(scene, camera);
+        }
+        animate();
+        mount.classList.add('ready');
+
+        function pause(){ if(raf){ cancelAnimationFrame(raf); raf = null; } }
+        function resume(){ if(!raf && visible && document.visibilityState === 'visible'){ animate(); } }
+
+        document.addEventListener('visibilitychange', function(){
+          if(document.visibilityState === 'hidden') pause(); else resume();
+        });
+
+        if('IntersectionObserver' in window){
+          var vio = new IntersectionObserver(function(entries){
+            entries.forEach(function(e){
+              visible = e.isIntersecting;
+              if(!visible) pause(); else resume();
+            });
+          }, { threshold: 0 });
+          vio.observe(mount);
+        }
+
+        function onResize(){
+          var w = mount.clientWidth || mount.parentElement.clientWidth;
+          var h = mount.clientHeight || mount.parentElement.clientHeight;
+          if(!w || !h) return;
+          camera.aspect = w/h; camera.updateProjectionMatrix();
+          renderer.setSize(w, h);
+        }
+        window.addEventListener('resize', onResize);
+      })
+      .catch(function(){ /* Three.js failed to load (offline/CDN blocked) — hero image placeholder remains as-is */ });
+  }
+
+  function init(){
+    initReveal();
+    initBadgeBump();
+    initHero3D();
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
 </script>
 </body>
 </html>
