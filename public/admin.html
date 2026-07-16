@@ -155,6 +155,19 @@ tbody tr:hover{background:rgba(255,255,255,.02)}
   #assist-panel{right:16px;left:16px;width:auto}
   .orb{filter:blur(60px)}
 }
+
+/* ── premium polish pass (matches storefront's easing/micro-interaction system) ── */
+:root{--ease:cubic-bezier(.22,1,.36,1);--ease-spring:cubic-bezier(.34,1.56,.64,1)}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+.btn{position:relative;overflow:hidden;transition:transform .3s var(--ease),box-shadow .3s var(--ease),background .3s var(--ease)}
+.btn::before{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(120deg,transparent,rgba(255,255,255,.25),transparent);transform:skewX(-20deg);transition:left .55s var(--ease)}
+.btn:hover::before{left:130%}
+.btn-gold:hover{box-shadow:0 8px 24px rgba(201,168,76,.35);transform:translateY(-2px)}
+.btn:active{transform:translateY(0) scale(.98)}
+.stat-card{transition:transform .35s var(--ease),box-shadow .35s var(--ease)}
+.stat-card:hover{transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.4)}
+.nav-item{transition:color .3s var(--ease),background .3s var(--ease),border-color .3s var(--ease)}
+.glass{transition:box-shadow .35s var(--ease)}
 </style>
 </head>
 <body>
