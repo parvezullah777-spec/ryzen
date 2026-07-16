@@ -1409,10 +1409,10 @@ function productCardHTML(p){
   var badgeHTML=badge?'<span class="pbadge '+badge[0]+'">'+badge[1]+'</span>':'';
   var sizesHTML=p.sizes.map(function(s){return '<div class="sd">'+s+'</div>';}).join('');
   return (
-    '<div class="pc" data-cat="'+p.cat+'" data-name="'+p.name+'" data-price="'+p.price+'" data-label="'+p.label+'" data-desc="'+escAttr(p.description)+'">'+
+    '<div class="pc" data-cat="'+escAttr(p.cat)+'" data-name="'+escAttr(p.name)+'" data-price="'+p.price+'" data-label="'+escAttr(p.label)+'" data-desc="'+escAttr(p.description)+'">'+
       '<div class="pt">'+badgeHTML+
         '<button class="wbtn" onclick="togWL(this,event)">'+WBTN_SVG+'</button>'+
-        '<img alt="'+p.name+'" loading="lazy" src="'+p.image+'"/>'+
+        '<img alt="'+escAttr(p.name)+'" loading="lazy" src="'+escAttr(p.image)+'"/>'+
         '<button class="qvbtn" onclick="event.stopPropagation();openQV(this.closest(\'.pc\'))">Quick View</button>'+
       '</div>'+
       '<div class="pcat">'+p.catLabel+'</div><div class="pname">'+p.name+'</div>'+
@@ -1424,12 +1424,13 @@ function productCardHTML(p){
 
 function renderProducts(){
   var grid=document.getElementById('pgrid');
-  fetch('products.json')
+  fetch('/api/products?action=list')
     .then(function(r){
       if(!r.ok)throw new Error('HTTP '+r.status);
       return r.json();
     })
-    .then(function(products){
+    .then(function(data){
+      var products=data&&data.products;
       if(!Array.isArray(products)||!products.length){
         grid.innerHTML='<p style="grid-column:1/-1;color:var(--gray);font-size:13px">No products available right now.</p>';
         return;
@@ -1438,10 +1439,10 @@ function renderProducts(){
       attachClicks();
     })
     .catch(function(err){
-      grid.innerHTML='<p style="grid-column:1/-1;color:var(--gray);font-size:13px">Could not load products. Make sure products.json exists.</p>';
+      grid.innerHTML='<p style="grid-column:1/-1;color:var(--gray);font-size:13px">Could not load products. Please try again shortly.</p>';
     });
 }
-renderProducts();
+document.addEventListener('DOMContentLoaded', renderProducts);
 
 function filterCat(tab,cat){
   document.querySelectorAll('.ftab').forEach(function(t){t.classList.remove('on')});
@@ -1484,37 +1485,6 @@ function filterCat(tab,cat){
 })();
 
 //]]>
-</script>
-<script>
-async function loadProducts() {
-  try {
-    const res = await fetch('/api/products?action=list');
-    const data = await res.json();
-    const grid = document.getElementById('pgrid');
-    if (!grid) return;
-    grid.innerHTML = data.products.map(function(p) {
-      return '<div class="pc" data-name="'+p.name+'" data-price="'+p.price+'" data-cat="'+p.cat+'" data-label="'+(p.badge||'')+'" data-desc="'+(p.description||'')+'">'+
-        '<div class="pt">'+
-          '<img src="'+p.image+'" alt="'+p.name+'"/>'+
-          (p.badge ? '<span class="pbadge b-'+p.badge.toLowerCase()+'">'+p.badge+'</span>' : '')+
-          '<button class="wbtn" onclick="togWL(this, event)">&#9825;</button>'+
-          '<button class="qvbtn">Quick View</button>'+
-        '</div>'+
-        '<div class="pcat">'+(p.catLabel||p.cat)+'</div>'+
-        '<div class="pname">'+p.name+'</div>'+
-        '<div class="pprice">'+
-          (p.originalPrice ? '<span class="og">₹'+p.originalPrice.toLocaleString('en-IN')+'</span>' : '')+
-          '<span class="'+(p.originalPrice?'sl':'')+'">₹'+p.price.toLocaleString('en-IN')+'</span>'+
-        '</div>'+
-        '<div class="psz">'+(p.sizes||[]).map(function(s){return '<span class="sd">'+s+'</span>'}).join('')+'</div>'+
-      '</div>';
-    }).join('');
-    if (typeof attachClicks === 'function') attachClicks();
-  } catch (err) {
-    console.error('Failed to load products:', err);
-  }
-}
-document.addEventListener('DOMContentLoaded', loadProducts);
 </script>
 
 <!-- ══════════════════════════════════════════════════════════════════
