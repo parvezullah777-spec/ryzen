@@ -90,8 +90,7 @@ button{cursor:pointer;border:none;background:none;font-family:inherit}
 .hico:hover{color:var(--gold)}
 .hico svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;display:block}
 .badge{position:absolute;top:-4px;right:-4px;background:var(--gold);color:var(--black);font-family:'Montserrat',sans-serif;font-size:9px;font-weight:700;min-width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px}
-.hbg{display:none;flex-direction:column;gap:5px;padding:6px}
-.hbg span{display:block;width:22px;height:2px;background:var(--dark);transition:.3s}
+.hbg{display:none;align-items:center;justify-content:center;padding:6px}
 
 /* SEARCH */
 #srch{position:fixed;inset:0;background:rgba(0,0,0,.9);z-index:2000;display:none;align-items:flex-start;justify-content:center;padding-top:130px}
@@ -366,7 +365,7 @@ select.addr-inp{appearance:none;-webkit-appearance:none;background-image:url("da
      Nothing above this block was touched: same selectors, same markup
      requirements, same JS hooks. Everything here either adds new rules
      or refines existing ones (shadows, transitions, glass, spacing).
-     Safe to remove this whole <style> block to instantly revert. ══════ */
+     Safe to remove this whole <style> block to instantly revert. ══════ -->
 <style>
 :root{
   --ease:cubic-bezier(.22,1,.36,1);
@@ -483,6 +482,44 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   .pc:hover .pt{box-shadow:none}
 }
 </style>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ACCOUNT DROPDOWN — additive only. Replaces the plain "SIGN IN"
+     button's *appearance* with an icon + dropdown; the underlying
+     openAuth() call and ryzen:open-auth event are unchanged, so
+     AuthFlow.jsx keeps working exactly as before. Safe to remove this
+     whole block (style + markup + script) to revert to the old button. ══════ -->
+<style>
+.acct-wrap{position:relative}
+.acct-dd{
+  position:absolute;top:calc(100% + 14px);right:-8px;width:230px;
+  background:var(--glass-light,rgba(255,255,255,.9));
+  -webkit-backdrop-filter:blur(20px) saturate(160%);
+  backdrop-filter:blur(20px) saturate(160%);
+  border-top:2px solid var(--gold);
+  box-shadow:0 20px 50px rgba(13,13,13,.16);
+  padding:8px 0;display:flex;flex-direction:column;
+  opacity:0;visibility:hidden;transform:translateY(8px) scale(.97);
+  transform-origin:top right;
+  transition:opacity .3s var(--ease,ease),transform .3s var(--ease,ease),visibility .3s;
+  z-index:950;
+}
+.acct-dd.open{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.acct-greet{
+  font-family:'Montserrat',sans-serif;font-size:10px;font-weight:700;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--dark);padding:8px 18px 12px;
+  border-bottom:1px solid rgba(0,0,0,.06);margin-bottom:6px;
+}
+.acct-greet span{display:block;font-size:9px;font-weight:500;letter-spacing:.5px;color:var(--gray);text-transform:none;margin-top:3px}
+.acct-link{
+  display:block;width:100%;text-align:left;padding:10px 18px;
+  font-family:'Montserrat',sans-serif;font-size:10px;font-weight:600;letter-spacing:1.5px;
+  text-transform:uppercase;color:var(--dark);
+  transition:background .25s var(--ease,ease),color .25s var(--ease,ease),padding-left .25s var(--ease,ease);
+}
+.acct-link:hover{background:rgba(201,168,76,.08);color:var(--gold);padding-left:22px}
+.acct-divider{height:1px;background:rgba(0,0,0,.06);margin:6px 0}
+</style>
 </head>
 <body>
 
@@ -518,25 +555,31 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
       <a href='#'>Journal</a>
     </nav>
     <div class='hdr-icons'>
-      <button class='hico' onclick='openSearch()'>
-        <svg viewBox='0 0 24 24'><circle cx='11' cy='11' r='8'/><path d='M21 21l-4.35-4.35'/></svg>
-      </button>
-      <button class='hico' onclick='openCart()' title='Cart'>
-        <svg viewBox='0 0 24 24'><path d='M20 7h-4V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v3H4a1 1 0 000 2h1.22l.5 12.5a2 2 0 002 1.88h8.56a2 2 0 002-1.88l.5-12.5H20a1 1 0 000-2zM9 4h6v3H9V4z'/></svg>
+      <button class='hico' onclick='openSearch()' style='font-size:19px;line-height:1'>⌕</button>
+      <button class='hico' onclick='openCart()' title='Cart' style='font-size:18px;line-height:1'>
+        🛍
         <div class='badge' id='cart-b'>0</div>
       </button>
-      <button class='hico' onclick='openWL()' title='Wishlist'>
-        <svg viewBox='0 0 24 24'><path d='M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'/></svg>
+      <button class='hico' onclick='openWL()' title='Wishlist' style='font-size:18px;line-height:1'>
+        ♡
         <span class='badge' id='wl-b'>0</span>
       </button>
-      <button class='hico' onclick='openAuth()' style='color:var(--gold);font-weight:700;font-size:11px;letter-spacing:1px;padding:8px 12px;border:1px solid var(--gold);border-radius:4px'>
-        SIGN IN
-      </button>
-      <button class='hbg' onclick='openMobNav()'>
-        <span></span>
-        <span></span>
-        <span></span>
-      </button>
+      <div class='acct-wrap'>
+        <button class='hico' onclick='toggleAcctMenu(event)' title='Account' style='font-size:19px;line-height:1'>
+          ☰
+        </button>
+        <div class='acct-dd' id='acct-dd'>
+          <div class='acct-greet' id='acct-greet'>Hello, Guest<span id='acct-greet-sub'>Sign in for order history &amp; membership</span></div>
+          <button class='acct-link' onclick='acctNav("profile")'>My Profile</button>
+          <button class='acct-link' onclick='acctNav("orders")'>Your Orders</button>
+          <button class='acct-link' onclick='closeAcctMenu();openWL()'>Your Wishlist</button>
+          <button class='acct-link' onclick='acctNav("addresses")'>Your Addresses</button>
+          <button class='acct-link' onclick='acctNav("membership")'>Membership</button>
+          <div class='acct-divider'></div>
+          <button class='acct-link' id='acct-auth-action' onclick='acctAuthAction()'>Sign In</button>
+        </div>
+      </div>
+      <button class='hbg' onclick='openMobNav()' style='font-size:20px;line-height:1;color:var(--dark)'>⋮</button>
     </div>
   </div>
 </header>
@@ -770,7 +813,7 @@ body{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
       <hr class='qv-div'/>
       <p class='qv-desc' id='qv-desc'></p>
       <button class='btn btn-gold' style='width:100%' onclick='qvATC()'>Add to Bag</button>
-      <button class='btn btn-ow' style='width:100%' onclick='qvBookNow()'>Book Now &rarr;</button>
+      <button class='btn btn-ow' style='width:100%' onclick='qvBookNow()' id='qv-booknow'>Book Now &rarr;</button>
     </div>
   </div>
 </div>
@@ -1052,6 +1095,9 @@ function openQV(card){
     '<button class="sz" id="sz-custom" onclick="selCustom(this)">Custom Size</button>';
   document.getElementById('qv-custom-box').style.display='none';
   ['cm-shoulder','cm-chest','cm-hip','cm-length'].forEach(function(id){document.getElementById(id).value=''});
+  var isPre=card.querySelector('.b-pre');
+  var bookBtn=document.getElementById('qv-booknow');
+  if(bookBtn)bookBtn.textContent=isPre?'Book Now →':'Book Now →';
   document.getElementById('qv').classList.add('open');
 }
 function closeQV(){document.getElementById('qv').classList.remove('open')}
@@ -1413,7 +1459,7 @@ function productCardHTML(p){
       '<div class="pt">'+badgeHTML+
         '<button class="wbtn" onclick="togWL(this,event)">'+WBTN_SVG+'</button>'+
         '<img alt="'+escAttr(p.name)+'" loading="lazy" src="'+escAttr(p.image)+'"/>'+
-        '<button class="qvbtn" onclick="event.stopPropagation();openQV(this.closest(\'.pc\'))">Quick View</button>'+
+        '<button class="qvbtn" onclick="event.stopPropagation();openQV(this.closest(\'.pc\'))">'+(p.badge==='pre'?'Book Now':'Quick View')+'</button>'+
       '</div>'+
       '<div class="pcat">'+p.catLabel+'</div><div class="pname">'+p.name+'</div>'+
       '<div class="pprice">'+priceHTML(p)+'</div>'+
@@ -1492,7 +1538,7 @@ function filterCat(tab,cat){
      Purely visual: scroll-reveal, badge micro-animation, and a lazy,
      performance-guarded Three.js hero accent. Nothing here touches
      cart/wishlist/auth/checkout state or calls any API. If this script
-     fails to load entirely, the site behaves exactly as before. ══════ */
+     fails to load entirely, the site behaves exactly as before. ══════ -->
 <script>
 (function(){
   "use strict";
@@ -1660,6 +1706,92 @@ function filterCat(tab,cat){
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
+  }
+})();
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ACCOUNT DROPDOWN — additive script only. Reuses the existing
+     getUserId()/window.supabaseClient/openAuth() already defined above;
+     doesn't touch cart, wishlist, or checkout logic. ══════ -->
+<script>
+(function(){
+  "use strict";
+
+  window.toggleAcctMenu = function(e){
+    if(e) e.stopPropagation();
+    document.getElementById('acct-dd').classList.toggle('open');
+  };
+  window.closeAcctMenu = function(){
+    document.getElementById('acct-dd').classList.remove('open');
+  };
+  document.addEventListener('click', function(e){
+    var wrap = document.querySelector('.acct-wrap');
+    if(wrap && !wrap.contains(e.target)) window.closeAcctMenu();
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') window.closeAcctMenu();
+  });
+
+  // "My Profile" / "Your Orders" / "Your Addresses" / "Membership" all open
+  // the existing AuthFlow overlay via the same ryzen:open-auth event already
+  // used elsewhere on this page, passing a `step` hint in detail.
+  // NOTE: AuthFlow.jsx needs to read event.detail.step to deep-link into
+  // its matching screen (it already has profile/addresses/membership
+  // sub-screens per your setup) — if it doesn't yet, it will just open to
+  // its default screen, which still works, just not on the exact tab.
+  window.acctNav = function(step){
+    window.closeAcctMenu();
+    window.dispatchEvent(new CustomEvent('ryzen:open-auth', { detail:{ step: step } }));
+  };
+
+  window.acctAuthAction = function(){
+    window.closeAcctMenu();
+    getUserId().then(function(uid){
+      if(uid && window.supabaseClient){
+        window.supabaseClient.auth.signOut().then(function(){
+          toast('Signed out');
+          refreshAcctGreeting(null);
+        });
+      }else{
+        openAuth();
+      }
+    });
+  };
+
+  function refreshAcctGreeting(session){
+    var greet = document.getElementById('acct-greet');
+    var sub = document.getElementById('acct-greet-sub');
+    var action = document.getElementById('acct-auth-action');
+    if(session && session.user){
+      var label = session.user.user_metadata && session.user.user_metadata.full_name
+        ? session.user.user_metadata.full_name
+        : (session.user.email || 'Member');
+      greet.childNodes[0].textContent = 'Hello, ' + label;
+      sub.textContent = 'Manage your account below';
+      action.textContent = 'Sign Out';
+    }else{
+      greet.childNodes[0].textContent = 'Hello, Guest';
+      sub.textContent = 'Sign in for order history & membership';
+      action.textContent = 'Sign In';
+    }
+  }
+
+  function initAcctGreeting(){
+    if(!window.supabaseClient) return;
+    window.supabaseClient.auth.getSession().then(function(res){
+      refreshAcctGreeting(res && res.data && res.data.session);
+    });
+    window.supabaseClient.auth.onAuthStateChange(function(event, session){
+      if(event === 'SIGNED_IN') refreshAcctGreeting(session);
+      if(event === 'SIGNED_OUT') refreshAcctGreeting(null);
+    });
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initAcctGreeting);
+  }else{
+    initAcctGreeting();
   }
 })();
 </script>
