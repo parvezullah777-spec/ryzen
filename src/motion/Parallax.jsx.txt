@@ -1,0 +1,50 @@
+import React, { useEffect, useRef } from "react";
+
+/**
+ * Wraps existing content to give it a subtle parallax offset on scroll.
+ * Uses transform only (never top/margin) so it never triggers layout
+ * reflow — safe for 60fps scrolling.
+ *
+ * speed: -1 to 1. Positive = moves slower than scroll (background feel).
+ *        Negative = moves faster (foreground pop).
+ */
+export default function Parallax({ children, speed = 0.2, className = "" }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    let ticking = false;
+
+    const update = () => {
+      const rect = node.getBoundingClientRect();
+      const viewportCenter = window.innerHeight / 2;
+      const elementCenter = rect.top + rect.height / 2;
+      const distanceFromCenter = elementCenter - viewportCenter;
+      const offset = distanceFromCenter * speed * -1;
+      node.style.transform = `translate3d(0, ${offset}px, 0)`;
+      ticking = false;
+    };
+
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(update);
+        ticking = true;
+      }
+    };
+
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, [speed]);
+
+  return (
+    <div ref={ref} className={`ryzen-anim-layer ${className}`}>
+      {children}
+    </div>
+  );
+}

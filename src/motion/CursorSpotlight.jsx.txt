@@ -1,0 +1,46 @@
+import React, { useEffect, useRef } from "react";
+
+/**
+ * Wrap a hero/section with this to get a soft gold spotlight that follows
+ * the cursor. Uses CSS variables + a radial-gradient background, so the
+ * browser composites it on the GPU instead of repainting on every move.
+ *
+ * Usage:
+ *   <CursorSpotlight><YourExistingHero /></CursorSpotlight>
+ */
+export default function CursorSpotlight({ children, className = "", size = 500 }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    let raf = null;
+
+    const onMove = (e) => {
+      const rect = node.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        node.style.setProperty("--spot-x", `${x}px`);
+        node.style.setProperty("--spot-y", `${y}px`);
+      });
+    };
+
+    node.addEventListener("mousemove", onMove);
+    return () => {
+      node.removeEventListener("mousemove", onMove);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  return (
+    <div
+      ref={ref}
+      className={`ryzen-spotlight-wrap ${className}`}
+      style={{ "--spot-size": `${size}px` }}
+    >
+      {children}
+    </div>
+  );
+}
